@@ -16,6 +16,7 @@
 8. For new features, first define acceptance criteria.
 9. Keep changes small and task-focused.
 10. If the task is unclear, ask before editing.
+11. After type/syntax checks pass, automatically run verification tests (start dev server, call affected APIs, confirm expected behavior) before committing.
 
 ## Git Workflow
 

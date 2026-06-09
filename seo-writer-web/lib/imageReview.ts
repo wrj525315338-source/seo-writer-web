@@ -192,7 +192,7 @@ export function readImageReviewStatus(projectId: string): ImageReviewStatus {
     return {
       id,
       type: String(meta.type || planImage.type || ""),
-      prompt: String(meta.original_prompt || meta.prompt || planImage.prompt || ""),
+      prompt: String(meta.prompt || planImage.prompt || ""),
       altText: String(meta.alt_text || planImage.alt_text || ""),
       insertAfterText: String(meta.insert_after_text || planImage.insert_after_text || ""),
       insertBeforeHeading: String(meta.insert_before_heading || planImage.insert_before_heading || ""),

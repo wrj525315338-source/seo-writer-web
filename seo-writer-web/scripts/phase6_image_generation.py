@@ -424,6 +424,12 @@ def generate_images(
         output_path = images_dir / f"{image_id}.{output_format}"
         base_prompt = str(image.get("prompt", ""))
         prompt_for_request = base_prompt
+        if image_id in force_ids:
+            existing_entry = existing_successes.get(image_id)
+            if existing_entry:
+                previous_prompt = str(existing_entry.get("prompt") or "")
+                if previous_prompt:
+                    prompt_for_request = previous_prompt
         if image_id in force_ids and review_comment.strip():
             prompt_for_request = (
                 f"{base_prompt}\n\n"

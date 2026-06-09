@@ -26,6 +26,7 @@ interface ImagePlanFile {
 }
 
 interface ImageMetadataEntry {
+  id?: string;
   status?: string;
   error?: string;
 }
@@ -39,6 +40,10 @@ interface ImageMetadataFile {
   failed_count?: number;
   retry_needed?: boolean;
   images?: ImageMetadataEntry[];
+}
+
+interface ImageReviewFile {
+  images?: Record<string, { status?: string }>;
 }
 
 function readJson<T>(filePath: string): T | null {
@@ -69,10 +74,18 @@ export function readPhase6Status(project: Project, state: ProjectState): Phase6S
   const failedCount = Number(metadata?.failed_count ?? images.filter((image) => image.status && image.status !== "success").length);
   const expectedCount = Math.max(0, Number(project.image_count_default || 0));
   const plannedCount = Math.max(Number(metadata?.planned_count ?? 0), plannedImages.length, expectedCount);
-  const details = cleanDetails([
+  const reviewPath = path.join(outputsDir, "image_review.json");
+  const review = readJson<ImageReviewFile>(reviewPath);
+  const reviewImages = review?.images || {};
+  const allResolved = images.length > 0 && images.every((image) => {
+    const id = String(image.id || "").trim();
+    return image.status === "success" || reviewImages[id]?.status === "approved";
+  });
+  const rawDetails = allResolved ? [] : [
     String(metadata?.error || metadata?.reason || ""),
     ...images.map((image) => String(image.error || ""))
-  ]);
+  ];
+  const details = cleanDetails(rawDetails);
   const enabled = Boolean(Number(project.enable_image_generation));
   const imagePlanExists = fs.existsSync(imagePlanPath);
   const metadataExists = fs.existsSync(metadataPath);
@@ -104,10 +117,12 @@ export function readPhase6Status(project: Project, state: ProjectState): Phase6S
   }
 
   if (
-    metadata?.status === "failed"
-    || Boolean(metadata?.retry_needed)
-    || failedCount > 0
-    || (metadataExists && plannedCount > 0 && successCount < plannedCount)
+    !allResolved && (
+      metadata?.status === "failed"
+      || Boolean(metadata?.retry_needed)
+      || failedCount > 0
+      || (metadataExists && plannedCount > 0 && successCount < plannedCount)
+    )
   ) {
     return {
       ...base,

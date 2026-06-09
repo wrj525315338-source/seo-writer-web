@@ -258,8 +258,8 @@ export function readImageReviewStatus(projectId: string): ImageReviewStatus {
       outputDocxExists,
       plannedCount,
       successCount: generatedCount,
-      items: items.map((item) => ({ ...item, status: "approved" })),
-      details
+      items: items.map((item) => ({ ...item, status: "approved", error: "" })),
+      details: []
     };
   }
 
@@ -274,8 +274,8 @@ export function readImageReviewStatus(projectId: string): ImageReviewStatus {
       outputDocxExists,
       plannedCount,
       successCount: generatedCount,
-      items,
-      details
+      items: items.map((item) => item.status === "approved" ? { ...item, error: "" } : item),
+      details: []
     };
   }
 

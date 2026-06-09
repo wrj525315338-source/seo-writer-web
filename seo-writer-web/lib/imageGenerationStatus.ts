@@ -18,6 +18,10 @@ interface ImageMetadataEntry {
   error?: string;
 }
 
+interface ImageReviewFile {
+  images?: Record<string, { status?: string }>;
+}
+
 interface ImageMetadataFile {
   status?: string;
   error?: string;
@@ -100,6 +104,17 @@ export function readImageGenerationRecoveryStatus(projectId: string, expectedIma
   const hasModelLikeError = errors.some(isModelLikeError);
 
   if (!topLevelFailed && !allAttemptedImagesFailed && !partialFailure && !hasModelLikeError) {
+    return empty;
+  }
+
+  const reviewPath = path.join(outputsDir, "image_review.json");
+  const review = readJson<ImageReviewFile>(reviewPath);
+  const reviewImages = review?.images || {};
+  const allResolved = images.every((image) => {
+    const id = String(image.id || "").trim();
+    return image.status === "success" || reviewImages[id]?.status === "approved";
+  });
+  if (allResolved && images.length > 0) {
     return empty;
   }
 

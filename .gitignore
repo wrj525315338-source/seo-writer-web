@@ -9,3 +9,4 @@ build
 .cache
 .DS_Store
 *.log
+*.tsbuildinfo

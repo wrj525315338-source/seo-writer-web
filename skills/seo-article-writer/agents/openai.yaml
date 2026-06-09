@@ -1,0 +1,4 @@
+interface:
+  display_name: "SEO Article Writer"
+  short_description: "分阶段 SEO/GEO/AIO 文章写作与交付工作流"
+  default_prompt: "Use $seo-article-writer to run a staged SEO article workflow from writing guidelines, example articles, topic requirements, and review feedback."

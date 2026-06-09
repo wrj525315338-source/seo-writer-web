@@ -1,0 +1,23 @@
+{
+  "project_name": "",
+  "project_slug": "",
+  "current_phase": "not_started",
+  "writing_guidelines_paths": [],
+  "example_article_paths": [],
+  "topic_requirement_paths": [],
+  "material_summary_path": "",
+  "outline_path": "",
+  "first_two_sections_path": "",
+  "full_article_path": "",
+  "checklist_report_path": "",
+  "final_docx_path": "",
+  "image_plan_path": "",
+  "final_article_with_image_slots_path": "",
+  "outline_confirmed": false,
+  "phase2_polished": false,
+  "full_article_completed": false,
+  "checklist_passed": false,
+  "final_docx_generated": false,
+  "image_plan_generated": false,
+  "pending_user_questions": []
+}

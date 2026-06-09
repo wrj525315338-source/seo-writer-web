@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+.env
+data/*.db
+data/*.db-*
+storage/projects/*
+!storage/projects/.gitkeep
+storage/shared/*
+!storage/shared/.gitkeep
+
+__pycache__/
+*.pyc

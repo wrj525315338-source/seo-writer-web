@@ -15,20 +15,21 @@ Every new image prompt should specify:
 - Photorealistic generated, non-identifiable adult language learner as the main human subject; natural expression, real-photo lighting, no celebrity, no public figure, no private person's likeness.
 - Do not copy logos or wordmarks from reference images.
 - Website hero composition similar to the provided reference: left-side headline/short chips, right-side learner holding or looking at a phone, a phone mockup with purple chat/voice UI elements, and soft white/lavender background.
-- HelloTalk Purple `#5856D6` is the dominant brand color. Use purple chat bubbles, pill badges, rounded cards, curved purple footer/edge shapes, and subtle decorative geometry.
+- Purple `#5856D6` is the dominant brand color. Use purple chat bubbles, pill badges, rounded cards, curved purple footer/edge shapes, and subtle decorative geometry.
 - Keep all visible text short and generic. Do not copy reference-image text, testimonials, unsupported claims, or exact UI copy. Do not invent product features.
-- The image may include common conversation elements (chat bubbles, voice message chips, language exchange cards), but should not claim pixel-perfect UI unless a real HelloTalk screenshot is provided.
+- Do NOT include "HelloTalk" text, logo, or wordmark in the image. Use purple brand styling to convey brand identity without showing the brand name or icon.
+- The image may include common conversation elements (chat bubbles, voice message chips, language exchange cards), but should not claim pixel-perfect UI unless a real screenshot is provided.
 
 ### Photorealistic Brand Composite Anchor (append to every prompt)
 
 ```
-PHOTOREALISTIC HELLOTALK WEBSITE STYLE: Create a bright real-photo marketing composite, not a flat-only infographic. Main subject is a generated, non-identifiable adult language learner in natural lifestyle photography, holding or looking at a smartphone with an optimistic expression. Do not depict a celebrity, public figure, influencer, or any real private person. Use soft daylight or bright studio lighting, shallow-but-readable depth of field, clean skin tones, and polished commercial photography.
+PHOTOREALISTIC WEBSITE STYLE: Create a bright real-photo marketing composite, not a flat-only infographic. Main subject is a generated, non-identifiable adult language learner in natural lifestyle photography, holding or looking at a smartphone with an optimistic expression. Do not depict a celebrity, public figure, influencer, or any real private person. Use soft daylight or bright studio lighting, shallow-but-readable depth of field, clean skin tones, and polished commercial photography.
 
-BRAND REQUIREMENTS: Use HelloTalk Purple (#5856D6) as the dominant accent in chat bubbles, buttons, bottom wave/edge shape, pill badges, and rounded cards. Background should be white or very light lavender (#FAFAFE) with subtle purple decorative geometry.
+BRAND REQUIREMENTS: Use Purple (#5856D6) as the dominant accent in chat bubbles, buttons, bottom wave/edge shape, pill badges, and rounded cards. Background should be white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Do NOT include "HelloTalk" text, logo, or wordmark in the image.
 
-COMPOSITION: Follow HelloTalk official website/app style: left-side headline area with short text chips, center/right photoreal learner, and a realistic phone mockup showing common language-exchange chat/voice elements in purple and white. Keep any UI generic and truthful; do not invent unsupported features, metrics, testimonials, or exact UI screens. Use rounded cards, filled pill badges, soft shadows, and compact article-specific takeaway chips.
+COMPOSITION: Follow website/app marketing style: left-side headline area with short text chips, center/right photoreal learner, and a realistic phone mockup showing common language-exchange chat/voice elements in purple and white. Keep any UI generic and truthful; do not invent unsupported features, metrics, testimonials, or exact UI screens. Use rounded cards, filled pill badges, soft shadows, and compact article-specific takeaway chips.
 
-AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, dark/moody palettes, excessive text, fake reviews, fake user data, or unsupported product claims.
+AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, dark/moody palettes, excessive text, fake reviews, fake user data, unsupported product claims, and any text or logo that reads "HelloTalk".
 ```
 
 ---
@@ -133,7 +134,7 @@ Once the visual concept and language aesthetic are chosen, apply the brand:
 ## Brand Style Anchor (append to every prompt)
 
 ```
-BRAND & STYLE: Use HelloTalk official website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. HelloTalk Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, or unsupported product claims.
+BRAND & STYLE: Use website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, unsupported product claims, and any text or logo that reads "HelloTalk" — use purple brand styling to convey brand identity without showing the brand name or icon.
 ```
 
 ---
@@ -196,7 +197,7 @@ Title area (left column):
 - Title: "How long does it actually take?" — 30pt bold, #1C1C1E
 - Subtitle: "FSI study hours by language difficulty" — 14pt, #6E6E73
 
-BRAND & STYLE: Use HelloTalk official website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. HelloTalk Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, or unsupported product claims.
+BRAND & STYLE: Use website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, unsupported product claims, and any text or logo that reads "HelloTalk" — use purple brand styling to convey brand identity without showing the brand name or icon.
 ```
 
 ---
@@ -252,7 +253,7 @@ Title section (top-left):
 - "MILESTONE TIMELINE" pill badge: #5856D6 fill, white
 - Title: "Spanish learning milestone timeline" — 30pt bold, #1C1C1E
 
-BRAND & STYLE: Use HelloTalk official website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. HelloTalk Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, or unsupported product claims.
+BRAND & STYLE: Use website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, unsupported product claims, and any text or logo that reads "HelloTalk" — use purple brand styling to convey brand identity without showing the brand name or icon.
 ```
 
 ---
@@ -299,7 +300,7 @@ Title (above the two zones):
   - "FRAMEWORK DIAGRAM" pill badge
   - "The gap between solo study and real conversation" — 30pt bold
 
-BRAND & STYLE: Use HelloTalk official website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. HelloTalk Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, or unsupported product claims.
+BRAND & STYLE: Use website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, unsupported product claims, and any text or logo that reads "HelloTalk" — use purple brand styling to convey brand identity without showing the brand name or icon.
 ```
 
 ---
@@ -357,7 +358,7 @@ Background:
   - Subtle partial circles: top-right and bottom-left, #5856D6 at 5%
   - Left edge: 6px #5856D6 vertical strip
 
-BRAND & STYLE: Use HelloTalk official website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. HelloTalk Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, or unsupported product claims.
+BRAND & STYLE: Use website/app marketing style. The main image should be photorealistic lifestyle photography of a generated, non-identifiable adult language learner using a smartphone, with a bright optimistic expression and polished commercial lighting. Purple (#5856D6) is the dominant accent color in chat bubbles, phone UI highlights, pill badges, curved bottom/edge shapes, and rounded cards. Background is white or very light lavender (#FAFAFE) with subtle purple decorative geometry. Add a realistic phone mockup showing generic language-exchange chat/voice elements; do not invent unsupported features, fake reviews, metrics, or exact UI claims. Use filled rounded cards, short text chips, soft shadows, and concise article-specific takeaways. AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, excessive text, dark/moody palettes, fake user data, unsupported product claims, and any text or logo that reads "HelloTalk" — use purple brand styling to convey brand identity without showing the brand name or icon.
 ```
 
 ---
@@ -367,7 +368,7 @@ BRAND & STYLE: Use HelloTalk official website/app marketing style. The main imag
 **Critical**: Always reference an actual UI asset from `assets/ui-screenshots/`. Never generate a fake UI from scratch.
 
 ```
-I will provide a real HelloTalk app UI screenshot as the base. Keep the UI elements (buttons, layout, brand purple #5856D6, fonts) EXACTLY the same — do not redesign or restyle.
+I will provide a real app UI screenshot as the base. Keep the UI elements (buttons, layout, brand purple #5856D6, fonts) EXACTLY the same — do not redesign or restyle.
 
 Only modify:
 - Partner name, location, bio/tags
@@ -375,7 +376,7 @@ Only modify:
 - Chat message bubbles
 - Timestamps (update to recent)
 
-DO NOT add non-existent features. DO NOT modify the HelloTalk logo or color scheme.
+DO NOT add non-existent features. DO NOT add "HelloTalk" text, logo, or wordmark. DO NOT modify the color scheme.
 Output: high-fidelity PNG, 9:16 mobile ratio.
 ```
 

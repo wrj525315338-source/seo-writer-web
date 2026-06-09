@@ -25,7 +25,7 @@ You must:
 - avoid placing images directly before the final CTA paragraph
 - prefer `photo-hero-composite`, `photo-ui-composite`, and `photo-learning-scene`
 - every prompt must use a photorealistic generated, non-identifiable adult learner as the human subject; do not depict a real public figure, celebrity, influencer, or any private person
-- every prompt must include a phone mockup or app-card element that feels consistent with HelloTalk's official website/app style; do not invent unsupported features, metrics, testimonials, or claims
+- every prompt must include a phone mockup or app-card element with brand-consistent visual style (purple #5856D6, chat bubbles, rounded cards); do not invent unsupported features, metrics, testimonials, or claims; do NOT include "HelloTalk" text, logo, or wordmark in any image — use purple brand styling to convey brand identity without showing the brand name or icon
 - avoid generic AI scene art, generic stock-photo clichés, flat-only infographics, unrelated logos, fake competitor UI, and large visible text beyond short headline/chip labels
 - include HelloTalk brand visual identity in every prompt: `purple #5856D6`, soft white/lavender background, rounded UI cards, pill badges or visual containers, purple chat bubbles, and subtle decorative geometry layer
 - incorporate relevant style cues from the image reference examples into each prompt as explicit visual instructions; do not merely say "refer to the example image"

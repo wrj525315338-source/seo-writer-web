@@ -162,7 +162,7 @@ A 6-8px wide vertical strip along the full left edge of the image in HelloTalk P
 The title section (top 15-18% of the image) has a very light purple background (`#5856D6` at 8% opacity) as a distinct header zone, with the category pill badge and title sitting inside it.
 
 **Option C — Bottom brand strip**:
-A 32-40px tall footer band in HelloTalk Purple with "HelloTalk Blog" in white 12pt text centered — replacing the current faint gray text.
+A 32-40px tall footer band in Purple (#5856D6) with short generic label (e.g. "Blog", "Language Tips") in white 12pt text centered — replacing the current faint gray text. Do not include "HelloTalk" text or logo in the footer.
 
 **Use at least one of these options in every infographic.** The 3-dot cluster alone is insufficient.
 
@@ -298,13 +298,13 @@ When the article references specific languages/cultures, ensure visuals are:
 This updated style anchor MUST replace the v1 anchor at the bottom of EVERY image prompt:
 
 ```
-STYLE & ATMOSPHERE: Create a bright photorealistic HelloTalk website/app marketing composite. Main subject is a generated, non-identifiable adult language learner in natural real-photo style, using a smartphone with an optimistic expression. Lighting is soft daylight or bright studio light, airy, polished, and commercial-quality. Background is clean white or very light lavender (#FAFAFE) with subtle HelloTalk Purple (#5856D6) geometry.
+STYLE & ATMOSPHERE: Create a bright photorealistic website/app marketing composite. Main subject is a generated, non-identifiable adult language learner in natural real-photo style, using a smartphone with an optimistic expression. Lighting is soft daylight or bright studio light, airy, polished, and commercial-quality. Background is clean white or very light lavender (#FAFAFE) with subtle Purple (#5856D6) geometry.
 
-BRAND REQUIREMENTS: HelloTalk Purple (#5856D6) must dominate chat bubbles, phone UI highlights, pill badges, rounded cards, and a curved bottom/edge shape. Small accents may use green (#34C759), pink (#FF2D92), and yellow (#FFCC00).
+BRAND REQUIREMENTS: Purple (#5856D6) must dominate chat bubbles, phone UI highlights, pill badges, rounded cards, and a curved bottom/edge shape. Small accents may use green (#34C759), pink (#FF2D92), and yellow (#FFCC00).
 
 COMPOSITION REQUIREMENTS: Use a website hero layout with brand-colored headline/chips on one side, photoreal learner and realistic phone mockup on the other. Phone mockup may show common language-exchange chat/voice elements in purple and white, but must not invent unsupported product features, fake reviews, exact user data, or unsupported claims. Cards/chips must be filled rounded containers with soft shadows, not outline-only boxes.
 
-AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, dark or moody palettes, excessive text, real public figures or identifiable private people, fake user data, fake metrics/testimonials, or unsupported product claims.
+AVOID: flat-only infographic output, cartoon characters, 3D render style, generic stock-photo cliches, unrelated logos, competitor UI, dark or moody palettes, excessive text, real public figures or identifiable private people, fake user data, fake metrics/testimonials, unsupported product claims, and any text or logo that reads "HelloTalk" — use purple brand styling to convey brand identity without showing the brand name or icon.
 ```
 
 ---

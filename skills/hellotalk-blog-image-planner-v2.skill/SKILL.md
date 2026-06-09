@@ -101,13 +101,13 @@ When deciding which type to recommend for a slot, follow this tree:
 
 ```
 Is this the opening image?
-├─ YES → Use photo-hero-composite (photoreal learner + HelloTalk icon + phone mockup)
+├─ YES → Use photo-hero-composite (photoreal learner + brand icon + phone mockup)
 └─ NO → Continue
    Is the section explaining product mechanics or conversation practice?
-   ├─ YES → Use photo-ui-composite (photoreal learner + phone mockup + purple chat/UI overlay)
+   ├─ YES → Use photo-ui-composite (photoreal learner + phone mockup + purple chat/UI overlay, no brand name/icon)
    └─ NO → Continue
       Is the section explaining a framework, timeline, or comparison?
-      ├─ YES → Use photo-learning-scene with compact cards/chips over the photo
+      ├─ YES → Use photo-learning-scene with compact cards/chips over the photo, no brand name/icon
       └─ NO → Skip the image unless the user explicitly requested a higher image count
 ```
 
@@ -125,7 +125,8 @@ Before outputting the final plan, verify:
 □ All alt text contains target keywords naturally
 □ Each prompt includes style, dimensions, color palette
 □ No image depicts a real public figure, celebrity, influencer, or identifiable private person
-□ No image fakes non-existent HelloTalk features
+□ No image fakes non-existent features
+□ No image contains "HelloTalk" text, logo, or wordmark (brand identity conveyed through purple #5856D6 styling only)
 □ [v2] Card backgrounds are filled/tinted, not outline-only
 □ [v2] Key data values use pill badges or visual containers, not plain colored text
 □ [v2] Background has subtle decorative geometry layer
@@ -197,3 +198,4 @@ When working with the user:
 - ❌ [v2] Plain outline boxes with no background fill
 - ❌ [v2] Key data as plain colored text without a visual container
 - ❌ [v2] Entirely white/blank backgrounds with no decorative geometry layer
+- ❌ Images containing "HelloTalk" text, logo, or wordmark (brand identity must be conveyed through purple #5856D6 styling, chat bubbles, and UI elements only)

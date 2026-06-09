@@ -100,17 +100,18 @@ def build_supplemental_image(image_number: int, summary: dict[str, Any], images:
     article_type = cleanup(summary.get("article_type") or "SEO article")
     h2_text = section_heading or "the article's key Korean learning system"
     prompt = (
-        "Create a photorealistic HelloTalk website/app marketing composite for the article section "
+        "Create a photorealistic website/app marketing composite for the article section "
         f"'{h2_text}'. The visual should show a generated, non-identifiable adult language learner using a smartphone "
         "in bright real-photo style, with an optimistic expression and polished commercial lighting. Add a realistic "
-        "phone mockup with generic language-exchange chat or voice elements in HelloTalk Purple (#5856D6), white, "
+        "phone mockup with generic language-exchange chat or voice elements in Purple (#5856D6), white, "
         "and very light lavender (#FAFAFE). Use short rounded "
         "cards or pill chips to summarize one practical takeaway from this section, without inventing product features, "
-        "fake testimonials, exact UI screens, or unsupported claims. Composition: website hero style with brand/icon "
-        "area, photoreal learner, phone mockup, purple chat bubbles, curved purple footer/edge shape, soft shadows, "
-        "and subtle Hangul or article-relevant decorative geometry. Avoid flat-only infographic output, cartoon style, "
-        "3D render style, generic stock-photo cliches, competitor logos, excessive visible text, and real public or "
-        "identifiable private people."
+        "fake testimonials, exact UI screens, or unsupported claims. Composition: website hero style with brand-colored "
+        "headline area, photoreal learner, phone mockup, purple chat bubbles, curved purple footer/edge shape, soft shadows, "
+        "and subtle article-relevant decorative geometry. Do NOT include 'HelloTalk' text, logo, or wordmark in the image — "
+        "use purple brand styling to convey brand identity without showing the brand name or icon. Avoid flat-only "
+        "infographic output, cartoon style, 3D render style, generic stock-photo cliches, competitor logos, excessive "
+        "visible text, and real public or identifiable private people."
     )
     return {
         "id": image_id,

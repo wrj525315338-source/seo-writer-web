@@ -293,6 +293,11 @@ def compliance_for_image(image: dict[str, Any], file_path: Path, plan: dict[str,
             and ("learner" in lowered or "person" in lowered or "adult" in lowered)
         )
     )
+    hellotalk_text_present = "hellotalk" in lowered and "hello talk" not in lowered
+    hello_talk_text_present = "hello talk" in lowered
+    has_hellotalk_exclusion = "do not include" in lowered and ("hellotalk" in lowered or "hello talk" in lowered)
+    brand_text_in_prompt = (hellotalk_text_present or hello_talk_text_present) and not has_hellotalk_exclusion
+
     checks = {
         "file_exists": file_path.exists() and file_path.stat().st_size > 0,
         "file_openable": image_file_openable(file_path),
@@ -304,13 +309,14 @@ def compliance_for_image(image: dict[str, Any], file_path: Path, plan: dict[str,
             prompt,
             ["generic lifestyle photo", "stock-photo-style", "stock photo style", "young adult wearing headphones"],
         ),
-        "uses_brand_style": "#5856d6" in lowered or "hellotalk purple" in lowered,
+        "uses_brand_style": "#5856d6" in lowered or "purple" in lowered,
         "has_filled_cards": ("filled" in lowered or "rounded" in lowered) and ("card" in lowered or "block" in lowered or "chip" in lowered),
         "has_pill_badges_or_containers": "pill" in lowered or "visual container" in lowered or "container" in lowered,
         "has_decorative_geometry": "geometry" in lowered or "geometric" in lowered,
         "no_fake_features": bool(notes.get("no_fake_features", True)),
         "not_near_hellotalk_mention": bool(notes.get("not_near_hellotalk_mention", True)),
         "not_before_final_cta": bool(notes.get("not_before_final_cta", True)),
+        "no_hellotalk_text_or_logo": not brand_text_in_prompt,
     }
 
     if image_type == "ui-screenshot-modified":
@@ -332,6 +338,7 @@ def compliance_for_image(image: dict[str, Any], file_path: Path, plan: dict[str,
         "no_fake_features",
         "not_near_hellotalk_mention",
         "not_before_final_cta",
+        "no_hellotalk_text_or_logo",
         "ui_screenshot_source_valid",
     ]
     failed = [key for key in critical_keys if not checks.get(key)]

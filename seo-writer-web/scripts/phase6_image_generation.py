@@ -362,6 +362,15 @@ def existing_success_by_id(existing_metadata: list[dict[str, Any]]) -> dict[str,
     return successes
 
 
+def existing_entry_by_id(existing_metadata: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    by_id: dict[str, dict[str, Any]] = {}
+    for entry in existing_metadata:
+        image_id = str(entry.get("id") or "").strip()
+        if image_id:
+            by_id[image_id] = entry
+    return by_id
+
+
 def successful_generated_count(metadata: list[dict[str, Any]]) -> int:
     count = 0
     for entry in metadata:
@@ -417,6 +426,7 @@ def generate_images(
     metadata: list[dict[str, Any]] = []
     compliance_report: list[dict[str, Any]] = []
     existing_successes = existing_success_by_id(existing_metadata or [])
+    all_existing_entries = existing_entry_by_id(existing_metadata or [])
     force_ids = force_regenerate_ids or set()
 
     for image in images:
@@ -425,7 +435,7 @@ def generate_images(
         base_prompt = str(image.get("prompt", ""))
         prompt_for_request = base_prompt
         if image_id in force_ids:
-            existing_entry = existing_successes.get(image_id)
+            existing_entry = all_existing_entries.get(image_id)
             if existing_entry:
                 previous_prompt = str(existing_entry.get("prompt") or "")
                 if previous_prompt:

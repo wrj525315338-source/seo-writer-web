@@ -1290,27 +1290,58 @@ async function runPhase4(project: Project): Promise<string> {
   const full = normalizeFinalArticleForDelivery(project);
   const output = outputPath(project.id, phaseOutputs.phase4[0]);
   const articleWordCount = countVisibleArticleWords(fs.readFileSync(full, "utf-8"));
-  const chunkPaths = preparePhase4Chunks(project.id, full);
-  const reportDir = path.join(getOutputsDir(project.id), "phase4_audit_chunks");
-  const chunkReportPaths: string[] = [];
-  const sourceMtimeMs = Math.max(fs.statSync(full).mtimeMs, fs.statSync(writingChecklist).mtimeMs);
-
-  for (const [index, chunkPath] of chunkPaths.entries()) {
-    const chunkReport = path.join(reportDir, `chunk_${String(index + 1).padStart(2, "0")}_report.md`);
-    const chunkSourceMtimeMs = Math.max(sourceMtimeMs, fs.statSync(chunkPath).mtimeMs);
-    if (!canReusePhase4ChunkReport(chunkReport, chunkSourceMtimeMs)) {
-      await runSkillPrompt(
-        project,
-        phase4PromptArgs("phase4_chunk_check.md", [writingChecklist, chunkPath], chunkReport),
-        "auditor"
-      );
-    }
-    ensureOutputExists(chunkReport);
-    chunkReportPaths.push(chunkReport);
-  }
-
-  mergePhase4ChunkReports(chunkReportPaths, output, articleWordCount);
+  await runSkillPrompt(
+    project,
+    phase4PromptArgs("phase4_checklist.md", [writingChecklist, full], output),
+    "auditor"
+  );
+  ensureOutputExists(output);
   return output;
+}
+
+export async function runPhase4Chunked(projectId: string): Promise<void> {
+  const project = requireProject(projectId);
+  const state = readProjectState(projectId);
+  const runId = createPhaseRun(projectId, "phase4", "running", "chunked audit");
+  setPhaseStatus(projectId, "phase4", "running");
+  updateProjectPhase(projectId, "phase4", "active");
+
+  try {
+    const writingChecklist = await ensureWritingChecklist(project);
+    const full = normalizeFinalArticleForDelivery(project);
+    const output = outputPath(project.id, phaseOutputs.phase4[0]);
+    const articleWordCount = countVisibleArticleWords(fs.readFileSync(full, "utf-8"));
+    const chunkPaths = preparePhase4Chunks(project.id, full);
+    const reportDir = path.join(getOutputsDir(project.id), "phase4_audit_chunks");
+    const chunkReportPaths: string[] = [];
+    const sourceMtimeMs = Math.max(fs.statSync(full).mtimeMs, fs.statSync(writingChecklist).mtimeMs);
+
+    for (const [index, chunkPath] of chunkPaths.entries()) {
+      const chunkReport = path.join(reportDir, `chunk_${String(index + 1).padStart(2, "0")}_report.md`);
+      const chunkSourceMtimeMs = Math.max(sourceMtimeMs, fs.statSync(chunkPath).mtimeMs);
+      if (!canReusePhase4ChunkReport(chunkReport, chunkSourceMtimeMs)) {
+        await runSkillPrompt(
+          project,
+          phase4PromptArgs("phase4_chunk_check.md", [writingChecklist, chunkPath], chunkReport),
+          "auditor"
+        );
+      }
+      ensureOutputExists(chunkReport);
+      chunkReportPaths.push(chunkReport);
+    }
+
+    mergePhase4ChunkReports(chunkReportPaths, output, articleWordCount);
+    ensureOutputExists(output);
+    setPhaseStatus(projectId, "phase4", "waiting_review");
+    updatePhaseRun(runId, "waiting_review", path.relative(getProjectDir(projectId), output).replace(/\\/g, "/"));
+    updateProjectPhase(projectId, "phase4", "active");
+  } catch (error) {
+    const message = sanitizeError(error);
+    setPhaseStatus(projectId, "phase4", "failed", message);
+    updatePhaseRun(runId, "failed", "", message);
+    updateProjectPhase(projectId, "phase4", "failed");
+    throw new Error(message);
+  }
 }
 
 async function runPromptPhase(project: Project, phase: PhaseId): Promise<string> {

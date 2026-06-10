@@ -9,6 +9,7 @@ import {
   retryImageGeneration,
   revisePhase,
   runPhase,
+  runPhase4Chunked,
   setImageGenerationEnabled,
   startImageGeneration
 } from "@/lib/phaseRunner";
@@ -45,6 +46,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
         baseUrl: optionalText(body.auditorBaseUrl),
         temperature: Number(optionalText(body.auditorTemperature) || 0.2)
       });
+    } else if (action === "runPhase4Chunked") {
+      await runPhase4Chunked(projectId);
     } else if (action === "revise") {
       const comment = String(body.comment || "").trim();
       if (!comment) {

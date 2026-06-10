@@ -172,7 +172,7 @@ function ImageGenerationModelConfig() {
       <div>
         <h3>Image Generation Model（生图模型）</h3>
         <p className="help">
-          用于 Phase 5 确认后的自动生图和 Word 插图。API Key 只从后端 .env 读取，不会提交到浏览器表单。
+          用于 Phase 6 图片生成。Phase 5 确认后会生成图片计划，之后可随时点击「开始生图」生成图片并插入 Word。API Key 只从后端 .env 读取，不会提交到浏览器表单。
         </p>
       </div>
       <input type="hidden" name="enableImageGeneration" value="false" />

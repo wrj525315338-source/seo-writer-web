@@ -112,7 +112,7 @@ export function readPhase6Status(project: Project, state: ProjectState): Phase6S
       ...base,
       label: "disabled",
       statusClass: "not_started",
-      description: "生图已关闭。确认 Phase 5 后会生成图片计划，但不会自动生成图片。"
+      description: "生图已关闭。Phase 5 确认后会生成图片计划和含占位符的 Word 文档。点击「开始生图」即可生成图片。"
     };
   }
 
@@ -173,7 +173,7 @@ export function readPhase6Status(project: Project, state: ProjectState): Phase6S
       ...base,
       label: "waiting",
       statusClass: "not_started",
-      description: "等待 Phase 5 人工确认后自动进入 Phase 5.5 图片规划和 Phase 6 生图。"
+      description: "等待 Phase 5 确认后生成图片计划。确认后可随时点击「开始生图」生成图片。"
     };
   }
 
@@ -190,6 +190,6 @@ export function readPhase6Status(project: Project, state: ProjectState): Phase6S
     ...base,
     label: "not_started",
     statusClass: "not_started",
-    description: "Phase 6 尚未开始。确认 Phase 5 后会自动生成图片计划和图片，然后等待人工审核。"
+    description: "Phase 6 尚未开始。确认 Phase 5 后会生成图片计划，之后可随时点击「开始生图」生成图片。"
   };
 }

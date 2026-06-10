@@ -1211,7 +1211,75 @@ function canReusePhase4ChunkReport(reportPath: string, sourceMtimeMs: number): b
   return stats.size > 0 && stats.mtimeMs >= sourceMtimeMs;
 }
 
-function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, articleWordCount: number): void {
+function runGlobalChecks(articlePath: string): string[] {
+  const issues: string[] = [];
+  if (!fs.existsSync(articlePath)) {
+    return issues;
+  }
+  const raw = fs.readFileSync(articlePath, "utf-8");
+  const lines = raw.split(/\r?\n/);
+
+  const openingLines: string[] = [];
+  let inOpening = true;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (/^##\s+/.test(trimmed)) {
+      inOpening = false;
+    }
+    if (inOpening && trimmed) {
+      openingLines.push(trimmed.toLowerCase());
+    }
+  }
+  const openingText = openingLines.join(" ");
+  if (openingText.includes("hellotalk")) {
+    issues.push("- C01-03 | 开头段落 | 开头段落出现了 HelloTalk，应在中后段自然引出 | 将 HelloTalk 相关内容移到文章中后段 | severity: high");
+  }
+
+  const hasSeoTitle = raw.includes("**SEO Title**:") || raw.includes("SEO Title:");
+  const hasDescription = raw.includes("**Description**:") || raw.includes("Description:");
+  const hasUrl = raw.includes("**URL**:") || raw.includes("URL:");
+  if (!hasSeoTitle) {
+    issues.push("- C03-01 | 元数据 | 缺少 SEO Title | 在 H1 之前添加 SEO Title | severity: high");
+  }
+  if (!hasDescription) {
+    issues.push("- C03-01 | 元数据 | 缺少 Description | 在 H1 之前添加 Description | severity: high");
+  }
+  if (!hasUrl) {
+    issues.push("- C03-01 | 元数据 | 缺少 URL slug | 在 H1 之前添加 URL slug | severity: medium");
+  }
+
+  const imagePatterns = [
+    /IMAGE_PLACEHOLDER/i,
+    /\[IMAGE_\d+\]/,
+    /AI Prompt:/i,
+    /Description:.*\(/,
+    /!\[[^\]]*\]\([^)]*\)/,
+  ];
+  for (const pattern of imagePatterns) {
+    if (pattern.test(raw)) {
+      issues.push(`- C05-07 | 全文 | 正文中残留图片相关语法（${pattern.source}） | 删除图片占位符或 markdown 图片语法 | severity: medium`);
+      break;
+    }
+  }
+
+  const forbiddenTerms = [
+    { pattern: /\bTandem\b/i, term: "Tandem" },
+    { pattern: /\bVPN\b/i, term: "VPN" },
+    { pattern: /\bTaiwan\b/i, term: "Taiwan" },
+    { pattern: /\bscammers?\b/i, term: "scammer" },
+    { pattern: /\bfrauds?\b/i, term: "fraud" },
+    { pattern: /\bdating\b/i, term: "dating" },
+  ];
+  for (const { pattern, term } of forbiddenTerms) {
+    if (pattern.test(raw)) {
+      issues.push(`- C04-01 | 全文 | 出现禁用词 "${term}" | 删除或替换为合规表述 | severity: high`);
+    }
+  }
+
+  return issues;
+}
+
+function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, articleWordCount: number, articlePath: string): void {
   const chunkReports = chunkReportPaths.map((reportPath, index) => ({
     index: index + 1,
     path: reportPath,
@@ -1223,7 +1291,9 @@ function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, art
     questions: remainingQuestionLines(report.content),
     passedEvidence: passedEvidenceLines(report.content)
   }));
-  const hasIssues = issueGroups.some((report) => report.issues.length > 0);
+  const globalIssues = runGlobalChecks(articlePath);
+  const hasChunkIssues = issueGroups.some((report) => report.issues.length > 0);
+  const hasIssues = hasChunkIssues || globalIssues.length > 0;
   const hasQuestions = issueGroups.some((report) => report.questions.length > 0);
   const lengthIssue =
     articleWordCount < finalArticleMinWords
@@ -1262,6 +1332,12 @@ function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, art
       lines.push("### Overall Length");
       lines.push("");
       lines.push(lengthIssue);
+      lines.push("");
+    }
+    if (globalIssues.length > 0) {
+      lines.push("### Global Rules");
+      lines.push("");
+      lines.push(...globalIssues);
       lines.push("");
     }
     for (const report of issueGroups) {
@@ -1345,7 +1421,7 @@ export async function runPhase4Chunked(projectId: string): Promise<void> {
       chunkReportPaths.push(chunkReport);
     }
 
-    mergePhase4ChunkReports(chunkReportPaths, output, articleWordCount);
+    mergePhase4ChunkReports(chunkReportPaths, output, articleWordCount, full);
     ensureOutputExists(output);
     setPhaseStatus(projectId, "phase4", "waiting_review");
     updatePhaseRun(runId, "waiting_review", path.relative(getProjectDir(projectId), output).replace(/\\/g, "/"));

@@ -164,7 +164,7 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
                         <div className="phase-actions">
                           <button type="button" onClick={() => submit("run", phase)} disabled={isBusy}>
                             <RotateCcw size={15} />
-                            重试当前审查模型
+                            重试
                           </button>
                           <button
                             type="button"
@@ -173,7 +173,7 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
                             disabled={isBusy || !auditorModelName}
                           >
                             <Settings size={15} />
-                            更换模型并重试
+                            更换模型
                           </button>
                           <button type="button" onClick={() => submit("runPhase4Chunked", phase)} disabled={isBusy}>
                             <Columns size={15} />

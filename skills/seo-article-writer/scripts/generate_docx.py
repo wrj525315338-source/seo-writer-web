@@ -82,7 +82,7 @@ def add_image_placeholder(document: Document, info: dict[str, str]) -> None:
         label = prompt_para.add_run("Prompt: ")
         label.bold = True
         label.font.size = Pt(10)
-        run = prompt_para.add_run(prompt[:500])
+        run = prompt_para.add_run(prompt)
         run.font.size = Pt(9)
         run.font.color.rgb = RGBColor(0x6E, 0x6E, 0x73)
 

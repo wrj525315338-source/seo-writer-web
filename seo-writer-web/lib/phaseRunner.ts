@@ -1581,23 +1581,6 @@ export async function approvePhase(projectId: string, phase: PhaseId): Promise<v
       );
     }
     await generateFinalDocx(project, true);
-    if (Boolean(Number(project.enable_image_generation))) {
-      try {
-        await runPhase6ImageOutput(project, { mode: "generate" });
-        resetImageReviewForGeneratedImages(projectId);
-      } catch (error) {
-        const message = sanitizeError(error);
-        fs.appendFileSync(
-          outputPath(projectId, "image_planning.log"),
-          [
-            `[${new Date().toISOString()}] phase6 failed`,
-            message,
-            ""
-          ].join("\n"),
-          "utf-8"
-        );
-      }
-    }
   }
   const nextState = approvePhaseInState(projectId, phase);
   updateProjectPhase(projectId, nextState.currentPhase, "active");

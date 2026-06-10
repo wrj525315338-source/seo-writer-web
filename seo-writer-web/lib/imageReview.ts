@@ -215,7 +215,7 @@ export function readImageReviewStatus(projectId: string): ImageReviewStatus {
     ...items.map((item) => item.error)
   ]);
 
-  if (!metadata && !plan && !review) {
+  if (!metadata) {
     return {
       shouldShow: false,
       label: "not_started",

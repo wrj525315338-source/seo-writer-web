@@ -107,12 +107,21 @@ export function readPhase6Status(project: Project, state: ProjectState): Phase6S
     details
   };
 
-  if (!enabled) {
+  if (!enabled && !imagePlanExists) {
     return {
       ...base,
       label: "disabled",
       statusClass: "not_started",
-      description: "生图已关闭。模型配置仍会显示，但确认 Phase 5 后不会调用 Phase 6。"
+      description: "生图已关闭。确认 Phase 5 后会生成图片计划，但不会自动生成图片。"
+    };
+  }
+
+  if (!enabled && imagePlanExists) {
+    return {
+      ...base,
+      label: "ready",
+      statusClass: "waiting_review",
+      description: "图片计划已就绪，生图功能当前关闭。点击「开始生图」即可生成图片。"
     };
   }
 

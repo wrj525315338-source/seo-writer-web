@@ -9,7 +9,8 @@ import {
   retryImageGeneration,
   revisePhase,
   runPhase,
-  setImageGenerationEnabled
+  setImageGenerationEnabled,
+  startImageGeneration
 } from "@/lib/phaseRunner";
 import { PhaseId } from "@/lib/types";
 import { decodeProjectId } from "@/lib/routeParams";
@@ -71,6 +72,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
       await retryImageGeneration(projectId);
     } else if (action === "setImageGenerationEnabled") {
       setImageGenerationEnabled(projectId, Boolean(body.enabled));
+    } else if (action === "startImageGeneration") {
+      await startImageGeneration(projectId);
     } else if (action === "changeImageModelAndRetry") {
       const imageProvider = asImageProvider(body.imageProvider);
       const { imageModelDisplayName, imageModelId } = resolveImageModelSelection(

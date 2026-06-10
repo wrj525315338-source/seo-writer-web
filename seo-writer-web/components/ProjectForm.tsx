@@ -1,12 +1,18 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Save } from "lucide-react";
 import FileUpload from "@/components/FileUpload";
 import ModelConfigForm from "@/components/ModelConfigForm";
 import { encodeProjectId } from "@/lib/routeParams";
 import type { SharedFilesStatus } from "@/lib/sharedFiles";
+
+interface ProductInfo {
+  name: string;
+  hasExtractedMaterials: boolean;
+  sourceFiles: string[];
+}
 
 interface ProjectFormProps {
   sharedFiles: SharedFilesStatus;
@@ -16,6 +22,20 @@ export default function ProjectForm({ sharedFiles }: ProjectFormProps) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isSubmitting, setSubmitting] = useState(false);
+  const [products, setProducts] = useState<ProductInfo[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<ProductInfo | null>(null);
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then((data) => setProducts(data.products || []))
+      .catch(() => {});
+  }, []);
+
+  function handleBrandNameChange(value: string) {
+    const product = products.find((p) => p.name === value) || null;
+    setSelectedProduct(product);
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,8 +79,26 @@ export default function ProjectForm({ sharedFiles }: ProjectFormProps) {
             <input id="language" name="language" defaultValue="English" />
           </div>
           <div className="field">
-            <label htmlFor="brandName">brandName</label>
-            <input id="brandName" name="brandName" placeholder="例如产品或品牌名" />
+            <label htmlFor="brandName">brandName（产品名）</label>
+            <input
+              id="brandName"
+              name="brandName"
+              list="productList"
+              placeholder="选择已有产品或输入新产品名"
+              onChange={(event) => handleBrandNameChange(event.target.value)}
+            />
+            <datalist id="productList">
+              {products.map((product) => (
+                <option key={product.name} value={product.name} />
+              ))}
+            </datalist>
+            {selectedProduct ? (
+              <span className="help">
+                已有产品：将复用已提取的材料（{selectedProduct.sourceFiles.length} 个源文件）。
+              </span>
+            ) : products.length > 0 ? (
+              <span className="help">可从下拉选择已有产品，或手动输入新产品名。</span>
+            ) : null}
           </div>
         </div>
       </div>

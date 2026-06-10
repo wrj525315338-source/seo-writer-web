@@ -11,6 +11,11 @@ import {
   updateProjectPhase
 } from "@/lib/db";
 import {
+  copyProductTemplateToProject,
+  getExtractedMaterialsForProduct,
+  saveProductTemplate
+} from "@/lib/productTemplates";
+import {
   getInputsDir,
   getOutputsDir,
   getProjectDir,
@@ -219,10 +224,20 @@ async function runPhase0(project: Project): Promise<string> {
   const briefPath = path.join(getInputsDir(project.id), "article_brief.md");
   writeArticleBrief(project.id, buildBriefMarkdown(project));
 
-  await runPythonScript(
-    [skillPath("scripts", "extract_materials.py"), ...getInputSources(project.id), "-o", extractedPath],
-    { cwd: getSkillDir(), env: buildModelEnv(project), timeoutMs: 180000 }
-  );
+  const productName = (project.brand_name || "").trim();
+  const templatePath = productName ? getExtractedMaterialsForProduct(productName) : null;
+
+  if (templatePath && fs.existsSync(templatePath)) {
+    fs.copyFileSync(templatePath, extractedPath);
+  } else {
+    await runPythonScript(
+      [skillPath("scripts", "extract_materials.py"), ...getInputSources(project.id), "-o", extractedPath],
+      { cwd: getSkillDir(), env: buildModelEnv(project), timeoutMs: 180000 }
+    );
+    if (productName && fs.existsSync(extractedPath)) {
+      saveProductTemplate(productName, extractedPath, getInputSources(project.id));
+    }
+  }
 
   const output = outputPath(project.id, phaseOutputs.phase0[0]);
   await runSkillPrompt(

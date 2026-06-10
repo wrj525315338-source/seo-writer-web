@@ -2,7 +2,7 @@
 
 import { ChangeEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Check, RotateCcw, Settings } from "lucide-react";
+import { Check, Columns, RotateCcw, Settings } from "lucide-react";
 import { providerLabels, resolveTextModel, textModelOptions } from "@/lib/modelCatalog";
 import { PhaseId, ProjectState, Provider } from "@/lib/types";
 import { encodeProjectId } from "@/lib/routeParams";
@@ -14,7 +14,7 @@ interface PhaseControlPanelProps {
   selectedPhase: PhaseId;
 }
 
-type PhaseAction = "run" | "changeAuditorModelAndRetry" | "approve";
+type PhaseAction = "run" | "changeAuditorModelAndRetry" | "approve" | "runPhase4Chunked";
 
 export default function PhaseControlPanel({ projectId, state, selectedPhase }: PhaseControlPanelProps) {
   const router = useRouter();
@@ -164,7 +164,7 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
                         <div className="phase-actions">
                           <button type="button" onClick={() => submit("run", phase)} disabled={isBusy}>
                             <RotateCcw size={15} />
-                            重试当前审查模型
+                            重试
                           </button>
                           <button
                             type="button"
@@ -173,7 +173,11 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
                             disabled={isBusy || !auditorModelName}
                           >
                             <Settings size={15} />
-                            更换模型并重试
+                            更换模型
+                          </button>
+                          <button type="button" onClick={() => submit("runPhase4Chunked", phase)} disabled={isBusy}>
+                            <Columns size={15} />
+                            分块审查
                           </button>
                         </div>
                       </div>

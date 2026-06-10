@@ -15,6 +15,11 @@ from docx.shared import Pt
 HEADING_RE = re.compile(r"^(#{1,3})\s+(.+?)\s*$")
 ORDERED_RE = re.compile(r"^\d+\.\s+(.+)")
 METADATA_RE = re.compile(r"^(?:\*\*)?(SEO Title|Description|URL):(?:\*\*)?\s+(.+?)\s*$", re.IGNORECASE)
+IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
+BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+ITALIC_RE = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
+CODE_SPAN_RE = re.compile(r"`([^`]+)`")
+LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
 
 
 def split_table_row(line: str) -> list[str]:
@@ -36,33 +41,87 @@ def add_table(document: Document, rows: list[list[str]]) -> None:
             table.cell(row_index, col_index).text = value
 
 
+def strip_inline_markdown(text: str) -> str:
+    """Remove inline markdown syntax that is not converted to formatting."""
+    text = IMAGE_RE.sub("", text)
+    text = LINK_RE.sub(r"\1", text)
+    text = CODE_SPAN_RE.sub(r"\1", text)
+    return text
+
+
+def add_runs_with_inline_format(paragraph, text: str) -> None:
+    """Parse inline markdown and add formatted runs to a paragraph."""
+    text = IMAGE_RE.sub("", text)
+    text = LINK_RE.sub(r"\1", text)
+
+    parts = re.split(r"(\*\*.*?\*\*|`[^`]+`|\*[^*]+\*)", text)
+    for part in parts:
+        if not part:
+            continue
+        bold_match = BOLD_RE.match(part)
+        if bold_match:
+            run = paragraph.add_run(bold_match.group(1))
+            run.bold = True
+            continue
+        code_match = CODE_SPAN_RE.match(part)
+        if code_match:
+            run = paragraph.add_run(code_match.group(1))
+            run.font.name = "Courier New"
+            run.font.size = Pt(10)
+            continue
+        italic_match = ITALIC_RE.match(part)
+        if italic_match:
+            run = paragraph.add_run(italic_match.group(1))
+            run.italic = True
+            continue
+        paragraph.add_run(part)
+
+
 def add_paragraph(document: Document, line: str) -> None:
     metadata = METADATA_RE.match(line)
     if metadata:
         paragraph = document.add_paragraph()
         label = paragraph.add_run(f"{metadata.group(1)}: ")
         label.bold = True
-        paragraph.add_run(metadata.group(2).strip())
+        add_runs_with_inline_format(paragraph, metadata.group(2).strip())
         paragraph.paragraph_format.space_after = Pt(4)
         return
 
     heading = HEADING_RE.match(line)
     if heading:
         level = len(heading.group(1))
-        document.add_heading(heading.group(2), level=level)
+        heading_text = strip_inline_markdown(heading.group(2))
+        document.add_heading(heading_text, level=level)
         return
 
     if line.startswith("- ") or line.startswith("* "):
-        document.add_paragraph(line[2:].strip(), style="List Bullet")
+        bullet_text = line[2:].strip()
+        if BOLD_RE.search(bullet_text) or CODE_SPAN_RE.search(bullet_text) or IMAGE_RE.search(bullet_text):
+            paragraph = document.add_paragraph(style="List Bullet")
+            add_runs_with_inline_format(paragraph, bullet_text)
+            paragraph.paragraph_format.space_after = Pt(4)
+        else:
+            document.add_paragraph(bullet_text, style="List Bullet")
         return
 
     ordered = ORDERED_RE.match(line)
     if ordered:
-        document.add_paragraph(ordered.group(1).strip(), style="List Number")
+        num_text = ordered.group(1).strip()
+        if BOLD_RE.search(num_text) or CODE_SPAN_RE.search(num_text):
+            paragraph = document.add_paragraph(style="List Number")
+            add_runs_with_inline_format(paragraph, num_text)
+            paragraph.paragraph_format.space_after = Pt(4)
+        else:
+            document.add_paragraph(num_text, style="List Number")
         return
 
-    paragraph = document.add_paragraph(line)
-    paragraph.paragraph_format.space_after = Pt(8)
+    if BOLD_RE.search(line) or CODE_SPAN_RE.search(line) or IMAGE_RE.search(line) or LINK_RE.search(line):
+        paragraph = document.add_paragraph()
+        add_runs_with_inline_format(paragraph, line)
+        paragraph.paragraph_format.space_after = Pt(8)
+    else:
+        paragraph = document.add_paragraph(line)
+        paragraph.paragraph_format.space_after = Pt(8)
 
 
 def convert_markdown(markdown: str) -> Document:

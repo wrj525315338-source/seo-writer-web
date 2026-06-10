@@ -1583,7 +1583,8 @@ export async function approvePhase(projectId: string, phase: PhaseId): Promise<v
     await generateFinalDocx(project, true);
   }
   const nextState = approvePhaseInState(projectId, phase);
-  updateProjectPhase(projectId, nextState.currentPhase, "active");
+  const nextStatus = phase === "phase5" ? "completed" : "active";
+  updateProjectPhase(projectId, nextState.currentPhase, nextStatus);
 }
 
 export function getReadableOutput(projectId: string, phase: PhaseId): string {

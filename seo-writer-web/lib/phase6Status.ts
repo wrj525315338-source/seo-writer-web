@@ -182,7 +182,7 @@ export function readPhase6Status(project: Project, state: ProjectState): Phase6S
       ...base,
       label: "ready",
       statusClass: "waiting_review",
-      description: "图片计划已生成，等待 Phase 6 生图执行或重试。图片生成后会进入人工审核。"
+      description: "图片计划已就绪。点击「开始生图」即可生成图片，不生图也不影响项目完成。"
     };
   }
 

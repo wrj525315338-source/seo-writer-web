@@ -4,12 +4,15 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
 
 from docx import Document
-from docx.shared import Pt
+from docx.shared import Pt, RGBColor
+
+IMAGE_SLOT_RE = re.compile(r"^\[IMAGE_\d+\]\s*$")
 
 
 HEADING_RE = re.compile(r"^(#{1,3})\s+(.+?)\s*$")
@@ -20,6 +23,68 @@ BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 ITALIC_RE = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 CODE_SPAN_RE = re.compile(r"`([^`]+)`")
 LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
+
+
+def load_image_plan(plan_path: Path | None) -> dict[str, dict[str, str]]:
+    """Load image plan and return a dict keyed by [IMAGE_N] marker."""
+    if not plan_path or not plan_path.exists():
+        return {}
+    try:
+        data = json.loads(plan_path.read_text(encoding="utf-8-sig"))
+    except Exception:
+        return {}
+    images = data.get("images") if isinstance(data.get("images"), list) else []
+    plan: dict[str, dict[str, str]] = {}
+    for img in images:
+        if not isinstance(img, dict):
+            continue
+        image_id = str(img.get("id") or "").strip()
+        if not image_id:
+            continue
+        marker = f"[{image_id}]"
+        plan[marker] = {
+            "id": image_id,
+            "type": str(img.get("type") or "").strip(),
+            "alt_text": str(img.get("alt_text") or "").strip(),
+            "prompt": str(img.get("prompt") or "").strip(),
+        }
+    return plan
+
+
+def add_image_placeholder(document: Document, info: dict[str, str]) -> None:
+    """Insert a formatted image placeholder paragraph."""
+    image_id = info.get("id", "")
+    image_type = info.get("type", "")
+    alt_text = info.get("alt_text", "")
+    prompt = info.get("prompt", "")
+
+    # Title line
+    title = document.add_paragraph()
+    title.paragraph_format.space_after = Pt(2)
+    icon = title.add_run(f"▶ {image_id}")
+    icon.bold = True
+    if image_type:
+        title.add_run(f" — {image_type}")
+
+    # Alt text line
+    if alt_text:
+        alt_para = document.add_paragraph()
+        alt_para.paragraph_format.space_after = Pt(2)
+        label = alt_para.add_run("Alt: ")
+        label.bold = True
+        label.font.size = Pt(10)
+        alt_para.add_run(alt_text)
+
+    # Prompt line
+    if prompt:
+        prompt_para = document.add_paragraph()
+        prompt_para.paragraph_format.space_after = Pt(8)
+        label = prompt_para.add_run("Prompt: ")
+        label.bold = True
+        label.font.size = Pt(10)
+        run = prompt_para.add_run(prompt[:500])
+        run.font.size = Pt(9)
+        run.font.color.rgb = RGBColor(0x6E, 0x6E, 0x73)
 
 
 def split_table_row(line: str) -> list[str]:
@@ -124,7 +189,7 @@ def add_paragraph(document: Document, line: str) -> None:
         paragraph.paragraph_format.space_after = Pt(8)
 
 
-def convert_markdown(markdown: str) -> Document:
+def convert_markdown(markdown: str, image_plan: dict[str, dict[str, str]] | None = None) -> Document:
     document = Document()
     styles = document.styles
     styles["Normal"].font.name = "Arial"
@@ -148,6 +213,12 @@ def convert_markdown(markdown: str) -> Document:
             add_table(document, table_rows)
             table_rows = []
 
+        if image_plan and IMAGE_SLOT_RE.match(line.strip()):
+            info = image_plan.get(line.strip())
+            if info:
+                add_image_placeholder(document, info)
+                continue
+
         add_paragraph(document, line)
 
     if table_rows:
@@ -160,10 +231,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Convert markdown article to docx.")
     parser.add_argument("input_md", type=Path, help="Input markdown article path.")
     parser.add_argument("output_docx", type=Path, help="Output docx path.")
+    parser.add_argument("--image-plan", type=Path, default=None, help="Optional image_plan.json for placeholder insertion.")
     args = parser.parse_args()
 
     markdown = args.input_md.read_text(encoding="utf-8")
-    document = convert_markdown(markdown)
+    image_plan = load_image_plan(args.image_plan)
+    document = convert_markdown(markdown, image_plan)
     args.output_docx.parent.mkdir(parents=True, exist_ok=True)
     document.save(args.output_docx)
     print(f"Wrote {args.output_docx}")

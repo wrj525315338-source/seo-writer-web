@@ -252,10 +252,17 @@ async function runPhase5(project: Project): Promise<string> {
   return docx;
 }
 
-async function generateFinalDocx(project: Project): Promise<string> {
+async function generateFinalDocx(project: Project, useSlotArticle = false): Promise<string> {
+  const slotArticle = outputPath(project.id, "final_article_with_image_slots.md");
   const fullArticle = normalizeFinalArticleForDelivery(project);
+  const articlePath = useSlotArticle && fs.existsSync(slotArticle) ? slotArticle : fullArticle;
+  const imagePlanPath = outputPath(project.id, "image_plan.json");
   const docx = outputPath(project.id, "final_article_for_google_docs.docx");
-  await runPythonScript([skillPath("scripts", "generate_docx.py"), fullArticle, docx], {
+  const args = [skillPath("scripts", "generate_docx.py"), articlePath, docx];
+  if (fs.existsSync(imagePlanPath)) {
+    args.push("--image-plan", imagePlanPath);
+  }
+  await runPythonScript(args, {
     cwd: getSkillDir(),
     env: buildModelEnv(project),
     timeoutMs: 120000
@@ -631,6 +638,20 @@ export function setImageGenerationEnabled(projectId: string, enabled: boolean): 
   const state = readProjectState(projectId);
   state.modelConfig.imageGeneration.enabled = enabled;
   writeProjectState(state);
+}
+
+export async function startImageGeneration(projectId: string): Promise<void> {
+  const project = requireProject(projectId);
+  const configPath = writeImageGenerationConfig(project);
+  const planPath = outputPath(projectId, "image_plan.json");
+  if (!fs.existsSync(planPath)) {
+    await runPhase55ImagePlanning(project, configPath);
+  }
+  if (!Boolean(Number(project.enable_image_generation))) {
+    setImageGenerationEnabled(projectId, true);
+  }
+  await runPhase6ImageOutput(project, { mode: "generate" });
+  resetImageReviewForGeneratedImages(projectId);
 }
 
 function clearPhase4AuditReports(projectId: string): void {
@@ -1512,21 +1533,33 @@ export async function approvePhase(projectId: string, phase: PhaseId): Promise<v
   assertPhaseCanApprove(state, phase);
   if (phase === "phase5") {
     const project = requireProject(projectId);
-    await generateFinalDocx(project);
     const configPath = writeImageGenerationConfig(project);
+    try {
+      await runPhase55ImagePlanning(project, configPath);
+    } catch (error) {
+      const message = sanitizeError(error);
+      fs.appendFileSync(
+        outputPath(projectId, "image_planning.log"),
+        [
+          `[${new Date().toISOString()}] phase5_5_image_planning failed`,
+          message,
+          ""
+        ].join("\n"),
+        "utf-8"
+      );
+    }
+    await generateFinalDocx(project, true);
     if (Boolean(Number(project.enable_image_generation))) {
       try {
-        await runPhase55ImagePlanning(project, configPath);
         await runPhase6ImageOutput(project, { mode: "generate" });
-        resetImageReviewForGeneratedImages(project.id);
+        resetImageReviewForGeneratedImages(projectId);
       } catch (error) {
         const message = sanitizeError(error);
         fs.appendFileSync(
-          outputPath(project.id, "image_planning.log"),
+          outputPath(projectId, "image_planning.log"),
           [
-            `[${new Date().toISOString()}] phase5_5_image_planning failed`,
+            `[${new Date().toISOString()}] phase6 failed`,
             message,
-            "phase6 skipped because image_plan.json was not ready.",
             ""
           ].join("\n"),
           "utf-8"
@@ -1535,11 +1568,7 @@ export async function approvePhase(projectId: string, phase: PhaseId): Promise<v
     }
   }
   const nextState = approvePhaseInState(projectId, phase);
-  const nextProjectStatus =
-    phase === "phase5" && !Boolean(Number(requireProject(projectId).enable_image_generation))
-      ? "completed"
-      : "active";
-  updateProjectPhase(projectId, nextState.currentPhase, nextProjectStatus);
+  updateProjectPhase(projectId, nextState.currentPhase, "active");
 }
 
 export function getReadableOutput(projectId: string, phase: PhaseId): string {

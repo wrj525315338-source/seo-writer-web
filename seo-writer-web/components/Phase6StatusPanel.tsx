@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FileText, Power } from "lucide-react";
+import { FileText, ImageIcon, Power } from "lucide-react";
 import { encodeProjectId } from "@/lib/routeParams";
 import type { Phase6StatusSummary } from "@/lib/phase6Status";
 
@@ -28,6 +28,27 @@ export default function Phase6StatusPanel({ projectId, status }: Phase6StatusPan
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "启用生图失败");
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleStartImageGeneration() {
+    setError("");
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/projects/${encodeProjectId(projectId)}/phase`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phase: "phase5", action: "startImageGeneration" })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "开始生图失败");
       }
       router.refresh();
     } catch (err) {
@@ -87,6 +108,14 @@ export default function Phase6StatusPanel({ projectId, status }: Phase6StatusPan
           {status.details.map((detail) => (
             <p key={detail}>{detail}</p>
           ))}
+        </div>
+      ) : null}
+      {status.label === "ready" && status.imagePlanExists && !status.metadataExists ? (
+        <div className="phase-actions">
+          <button type="button" className="primary" onClick={handleStartImageGeneration} disabled={busy}>
+            <ImageIcon size={15} />
+            {busy ? "生图中..." : "开始生图"}
+          </button>
         </div>
       ) : null}
       {status.label === "disabled" ? (

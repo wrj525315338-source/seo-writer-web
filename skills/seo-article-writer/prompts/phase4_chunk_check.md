@@ -6,25 +6,36 @@ Use the fixed Phase 0 checklist from `00_writing_checklist.md` to validate only 
 
 Do not generate a new checklist. Do not change checklist criteria. Do not audit sections that are not present in this chunk.
 
-## Required Work
+## Local Rules Only
 
-Check every applicable item from `00_writing_checklist.md` against this chunk, including:
+This chunk audit only checks **local rules** — rules that can be verified within a single chunk without needing the full article context.
 
-- structure and heading requirements visible in this chunk
-- top metadata block if this chunk contains the article opening: `SEO Title`, `Description`, and `URL` must appear before the H1
-- SEO/GEO/AIO requirements visible in this chunk
-- language style and product-context content requirements
-- direct-answer and FAQ quality if this chunk contains FAQ content
-- keyword naturalness
+**Check these rules against this chunk:**
+
+- language style requirements (tone, naturalness, conciseness)
 - forbidden words and expressions
 - forbidden punctuation and symbols
-- brand data accuracy
-- product spelling
-- required product modules visible in this chunk
-- competitor rules
-- PR red lines
-- formatting and Google Docs suitability
+- product spelling (Voicerooms, Livestreams, Moments, etc.)
+- keyword naturalness
+- direct-answer quality (if this chunk has Q&A content)
 - unsupported factual claims
+- formatting and readability
+- sentence length and complexity
+
+**Do NOT check these rules in chunk audit** (they are handled separately):
+
+- ❌ Opening paragraph rules (e.g., "HelloTalk not in opening", "direct answer in first paragraph") — these require knowing which part is the article opening
+- ❌ FAQ structure rules (FAQ count, heading, answer quality) — these require the full FAQ section
+- ❌ Conclusion/CTA rules (official link, action call) — these require the full conclusion
+- ❌ SEO metadata rules (Title, Description, URL existence) — these require the article top
+- ❌ Word count rules — this is checked in the merge step
+- ❌ Brand data coverage rules (how many official data points appear) — these require the full article
+- ❌ Brand feature coverage rules (all 4 modules present) — these require the full article
+- ❌ Data distribution rules (spread across sections) — these require the full article
+- ❌ Image placeholder / prompt residue checks — these are handled in the merge step
+- ❌ Competitor mention rules (Tandem, etc.) — these require knowing the full article context
+
+If a checklist item clearly falls into one of the excluded categories above, skip it silently. Do not report it as a violation.
 
 Do not judge whole-article length from one chunk. Whole-article length is checked in the final Phase 4 merge step against the 1200-1600 word target.
 

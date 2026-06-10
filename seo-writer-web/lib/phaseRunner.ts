@@ -1211,7 +1211,190 @@ function canReusePhase4ChunkReport(reportPath: string, sourceMtimeMs: number): b
   return stats.size > 0 && stats.mtimeMs >= sourceMtimeMs;
 }
 
-function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, articleWordCount: number): void {
+interface ChecklistItem {
+  id: string;
+  text: string;
+}
+
+function parseChecklistItems(checklistPath: string): ChecklistItem[] {
+  if (!fs.existsSync(checklistPath)) {
+    return [];
+  }
+  const content = fs.readFileSync(checklistPath, "utf-8");
+  const items: ChecklistItem[] = [];
+  const checkboxPattern = /^\s*-\s*\[.\]\s*(C\d+(?:-\d+)?(?:\.\d+)?)\s+(.+)$/;
+  const idPattern = /^\s*-\s*(C\d+(?:-\d+)?(?:\.\d+)?)\s*[|:：]\s*(.+)$/;
+
+  for (const line of content.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    const checkboxMatch = trimmed.match(checkboxPattern);
+    if (checkboxMatch) {
+      items.push({ id: checkboxMatch[1], text: checkboxMatch[2].trim() });
+      continue;
+    }
+    const idMatch = trimmed.match(idPattern);
+    if (idMatch) {
+      items.push({ id: idMatch[1], text: idMatch[2].trim() });
+      continue;
+    }
+  }
+  return items;
+}
+
+const OPENING_KEYWORDS = [
+  "开头", "opening", "first paragraph", "first few paragraphs", "前几段",
+  "不在开头", "直接回答读者", "不使用 In this article", "不上来介绍",
+  "开头段落", "文章开头", "opening paragraphs",
+];
+
+const FAQ_KEYWORDS = [
+  "FAQ", "Frequently Asked Questions", "FAQ 模块", "每条 FAQ",
+  "FAQ 数量", "FAQ 答案", "直接回答",
+];
+
+const CONCLUSION_KEYWORDS = [
+  "结尾", "conclusion", "官网链接", "CTA", "最低门槛行动",
+  "action over waiting", "hellotalk.com", "轻推",
+];
+
+const METADATA_KEYWORDS = [
+  "SEO Title", "Description", "URL", "元数据", "metadata",
+  "H1 之前", "文件最顶部",
+];
+
+const FORBIDDEN_KEYWORDS = [
+  "禁用词", "禁用符号", "forbidden words", "forbidden punctuation",
+  "零容忍", "全文不出现", "Tandem", "VPN", "Taiwan",
+  "scammers", "frauds", "dating", "政治",
+];
+
+const WORD_COUNT_KEYWORDS = [
+  "字数", "word count", "1200", "1600", "visible article words",
+];
+
+const IMAGE_KEYWORDS = [
+  "图片", "image", "IMAGE_PLACEHOLDER", "[IMAGE_1]", "AI Prompt",
+  "markdown 图片语法", "image description", "image planning",
+];
+
+const BRAND_DATA_KEYWORDS = [
+  "官方数据", "70M+", "200+ countries", "1B+ messages",
+  "90% of core features", "数据分散", "2–3 条",
+];
+
+const BRAND_FEATURE_KEYWORDS = [
+  "四大功能模块", "Chat-based Learning", "Moments",
+  "Voicerooms & Livestreams", "AI Learning Tools", "功能模块全部出现",
+];
+
+function matchesKeywords(text: string, keywords: string[]): boolean {
+  const lower = text.toLowerCase();
+  return keywords.some((kw) => lower.includes(kw.toLowerCase()));
+}
+
+function classifyChecklistItem(item: ChecklistItem): string {
+  const text = item.text;
+  if (matchesKeywords(text, OPENING_KEYWORDS)) return "opening";
+  if (matchesKeywords(text, FAQ_KEYWORDS)) return "faq";
+  if (matchesKeywords(text, CONCLUSION_KEYWORDS)) return "conclusion";
+  if (matchesKeywords(text, METADATA_KEYWORDS)) return "metadata";
+  if (matchesKeywords(text, FORBIDDEN_KEYWORDS)) return "forbidden";
+  if (matchesKeywords(text, WORD_COUNT_KEYWORDS)) return "word_count";
+  if (matchesKeywords(text, IMAGE_KEYWORDS)) return "image";
+  if (matchesKeywords(text, BRAND_DATA_KEYWORDS)) return "brand_data";
+  if (matchesKeywords(text, BRAND_FEATURE_KEYWORDS)) return "brand_feature";
+  return "local";
+}
+
+function runGlobalChecks(articlePath: string, checklistPath: string): string[] {
+  const issues: string[] = [];
+  if (!fs.existsSync(articlePath)) {
+    return issues;
+  }
+  const raw = fs.readFileSync(articlePath, "utf-8");
+  const articleLines = raw.split(/\r?\n/);
+
+  const items = parseChecklistItems(checklistPath);
+  const globalItems = items.filter((item) => classifyChecklistItem(item) !== "local");
+
+  for (const item of globalItems) {
+    const scope = classifyChecklistItem(item);
+
+    if (scope === "opening") {
+      const openingLines: string[] = [];
+      let inOpening = true;
+      for (const line of articleLines) {
+        const trimmed = line.trim();
+        if (/^##\s+/.test(trimmed)) inOpening = false;
+        if (inOpening && trimmed) openingLines.push(trimmed.toLowerCase());
+      }
+      const openingText = openingLines.join(" ");
+      if (matchesKeywords(item.text, ["HelloTalk", "hellotalk", "产品", "品牌"]) && openingText.includes("hellotalk")) {
+        issues.push(`- ${item.id} | 开头段落 | 开头段落出现了 HelloTalk，应在中后段自然引出 | 将 HelloTalk 相关内容移到文章中后段 | severity: high`);
+      }
+      if (matchesKeywords(item.text, ["直接回答", "核心问题", "In this article"]) && /in this article/i.test(openingText)) {
+        issues.push(`- ${item.id} | 开头段落 | 开头使用了模板句 "In this article" | 改为直接回答读者问题 | severity: medium`);
+      }
+    }
+
+    if (scope === "metadata") {
+      if (matchesKeywords(item.text, ["SEO Title"]) && !raw.includes("**SEO Title**:") && !raw.includes("SEO Title:")) {
+        issues.push(`- ${item.id} | 元数据 | 缺少 SEO Title | 在 H1 之前添加 SEO Title | severity: high`);
+      }
+      if (matchesKeywords(item.text, ["Description"]) && !raw.includes("**Description**:") && !raw.includes("Description:")) {
+        issues.push(`- ${item.id} | 元数据 | 缺少 Description | 在 H1 之前添加 Description | severity: high`);
+      }
+      if (matchesKeywords(item.text, ["URL"]) && !raw.includes("**URL**:") && !raw.includes("URL:")) {
+        issues.push(`- ${item.id} | 元数据 | 缺少 URL slug | 在 H1 之前添加 URL slug | severity: medium`);
+      }
+    }
+
+    if (scope === "forbidden") {
+      const forbiddenTerms = [
+        { pattern: /\bTandem\b/i, term: "Tandem" },
+        { pattern: /\bVPN\b/i, term: "VPN" },
+        { pattern: /\bTaiwan\b/i, term: "Taiwan" },
+        { pattern: /\bscammers?\b/i, term: "scammer" },
+        { pattern: /\bfrauds?\b/i, term: "fraud" },
+        { pattern: /\bdating\b/i, term: "dating" },
+      ];
+      for (const { pattern, term } of forbiddenTerms) {
+        if (matchesKeywords(item.text, [term]) && pattern.test(raw)) {
+          issues.push(`- ${item.id} | 全文 | 出现禁用词 "${term}" | 删除或替换为合规表述 | severity: high`);
+        }
+      }
+    }
+
+    if (scope === "image") {
+      const imagePatterns = [
+        { pattern: /IMAGE_PLACEHOLDER/i, name: "IMAGE_PLACEHOLDER" },
+        { pattern: /\[IMAGE_\d+\]/, name: "[IMAGE_N]" },
+        { pattern: /AI Prompt:/i, name: "AI Prompt:" },
+        { pattern: /!\[[^\]]*\]\([^)]*\)/, name: "markdown image syntax" },
+      ];
+      for (const { pattern, name } of imagePatterns) {
+        if (pattern.test(raw)) {
+          issues.push(`- ${item.id} | 全文 | 正文中残留图片相关语法（${name}） | 删除图片占位符或 markdown 图片语法 | severity: medium`);
+          break;
+        }
+      }
+    }
+  }
+
+  const hasSeoTitle = raw.includes("**SEO Title**:") || raw.includes("SEO Title:");
+  const hasDescription = raw.includes("**Description**:") || raw.includes("Description:");
+  const hasUrl = raw.includes("**URL**:") || raw.includes("URL:");
+  const metadataItems = globalItems.filter((item) => classifyChecklistItem(item) === "metadata");
+  if (metadataItems.length === 0) {
+    if (!hasSeoTitle) issues.push("- 元数据 | 元数据 | 缺少 SEO Title | 在 H1 之前添加 SEO Title | severity: high");
+    if (!hasDescription) issues.push("- 元数据 | 元数据 | 缺少 Description | 在 H1 之前添加 Description | severity: high");
+    if (!hasUrl) issues.push("- 元数据 | 元数据 | 缺少 URL slug | 在 H1 之前添加 URL slug | severity: medium");
+  }
+
+  return issues;
+}
+
+function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, articleWordCount: number, articlePath: string, checklistPath: string): void {
   const chunkReports = chunkReportPaths.map((reportPath, index) => ({
     index: index + 1,
     path: reportPath,
@@ -1223,7 +1406,9 @@ function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, art
     questions: remainingQuestionLines(report.content),
     passedEvidence: passedEvidenceLines(report.content)
   }));
-  const hasIssues = issueGroups.some((report) => report.issues.length > 0);
+  const globalIssues = runGlobalChecks(articlePath, checklistPath);
+  const hasChunkIssues = issueGroups.some((report) => report.issues.length > 0);
+  const hasIssues = hasChunkIssues || globalIssues.length > 0;
   const hasQuestions = issueGroups.some((report) => report.questions.length > 0);
   const lengthIssue =
     articleWordCount < finalArticleMinWords
@@ -1262,6 +1447,12 @@ function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, art
       lines.push("### Overall Length");
       lines.push("");
       lines.push(lengthIssue);
+      lines.push("");
+    }
+    if (globalIssues.length > 0) {
+      lines.push("### Global Rules");
+      lines.push("");
+      lines.push(...globalIssues);
       lines.push("");
     }
     for (const report of issueGroups) {
@@ -1345,7 +1536,7 @@ export async function runPhase4Chunked(projectId: string): Promise<void> {
       chunkReportPaths.push(chunkReport);
     }
 
-    mergePhase4ChunkReports(chunkReportPaths, output, articleWordCount);
+    mergePhase4ChunkReports(chunkReportPaths, output, articleWordCount, full, writingChecklist);
     ensureOutputExists(output);
     setPhaseStatus(projectId, "phase4", "waiting_review");
     updatePhaseRun(runId, "waiting_review", path.relative(getProjectDir(projectId), output).replace(/\\/g, "/"));

@@ -933,10 +933,11 @@ function seoMetadataFromProject(project: Project, articleMarkdown: string): SeoM
     project.article_title ||
     project.topic ||
     project.name;
+  const isEnglish = (project.language || "").toLowerCase().startsWith("eng");
   const description =
     extractMetadataValue(source, seoDescriptionLabels) ||
-    project.article_focus ||
-    project.recommendation_reason ||
+    (isEnglish ? "" : project.article_focus) ||
+    (isEnglish ? "" : project.recommendation_reason) ||
     `A practical guide to ${project.topic || project.primary_keyword}.`;
   const url =
     extractMetadataValue(source, seoUrlLabels) ||

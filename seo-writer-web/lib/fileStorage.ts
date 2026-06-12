@@ -118,3 +118,46 @@ export function resolveProjectFile(projectId: string, relativePath: string): str
   }
   return target;
 }
+
+// ============ Cluster Storage ============
+
+export function getClusterStorageRoot(): string {
+  const configured = process.env.CLUSTER_STORAGE_DIR || "./storage/clusters";
+  return path.isAbsolute(configured) ? configured : path.join(/* turbopackIgnore: true */ process.cwd(), configured);
+}
+
+export function getClusterDir(clusterId: string): string {
+  return path.join(getClusterStorageRoot(), clusterId);
+}
+
+export function getClusterArticlesDir(clusterId: string): string {
+  return path.join(getClusterDir(clusterId), "articles");
+}
+
+export function getClusterStatePath(clusterId: string): string {
+  return path.join(getClusterDir(clusterId), "cluster_state.json");
+}
+
+export function ensureClusterDirs(clusterId: string): void {
+  fs.mkdirSync(getClusterDir(clusterId), { recursive: true });
+  fs.mkdirSync(getClusterArticlesDir(clusterId), { recursive: true });
+}
+
+export function saveClusterBrief(clusterId: string, content: string): string {
+  ensureClusterDirs(clusterId);
+  const target = path.join(getClusterDir(clusterId), "cluster_brief.md");
+  fs.writeFileSync(target, content, "utf-8");
+  return target;
+}
+
+export function readClusterFile(clusterId: string, relativePath: string): string {
+  const clusterDir = getClusterDir(clusterId);
+  const target = path.resolve(clusterDir, relativePath);
+  if (!target.startsWith(path.resolve(clusterDir))) {
+    throw new Error("非法文件路径");
+  }
+  if (!fs.existsSync(target)) {
+    throw new Error("文件不存在");
+  }
+  return target;
+}

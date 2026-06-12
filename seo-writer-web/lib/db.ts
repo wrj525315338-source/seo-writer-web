@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { ImageProvider, PhaseId, PhaseRun, PhaseStatus, Project, ProjectStatus, Provider, ReviewComment } from "@/lib/types";
+import { ArticleRole, ArticleType, Cluster, ClusterArticleRecord, ClusterPhaseId, ImageProvider, PhaseId, PhaseRun, PhaseStatus, Project, ProjectStatus, Provider, ReviewComment } from "@/lib/types";
 import { decodeProjectId } from "@/lib/routeParams";
 
 let db: DatabaseSync | null = null;
@@ -90,6 +90,36 @@ export function getDb(): DatabaseSync {
       comment TEXT NOT NULL,
       response_file_path TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL,
+      FOREIGN KEY(project_id) REFERENCES projects(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS clusters (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      brand_name TEXT NOT NULL DEFAULT '',
+      language TEXT NOT NULL DEFAULT 'English',
+      brief_source_path TEXT NOT NULL DEFAULT '',
+      shared_summary_path TEXT NOT NULL DEFAULT '',
+      shared_checklist_path TEXT NOT NULL DEFAULT '',
+      cross_link_plan_path TEXT NOT NULL DEFAULT '',
+      current_phase TEXT NOT NULL DEFAULT 'cluster_phase0',
+      status TEXT NOT NULL DEFAULT 'active',
+      blog_base_url TEXT NOT NULL DEFAULT 'https://www.hellotalk.com/en/blog',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS cluster_articles (
+      id TEXT PRIMARY KEY,
+      cluster_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      article_role TEXT NOT NULL,
+      article_slug TEXT NOT NULL,
+      article_type TEXT NOT NULL DEFAULT 'guide',
+      target_word_min INTEGER NOT NULL DEFAULT 2000,
+      target_word_max INTEGER NOT NULL DEFAULT 3500,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY(cluster_id) REFERENCES clusters(id),
       FOREIGN KEY(project_id) REFERENCES projects(id)
     );
   `);
@@ -416,4 +446,85 @@ export function listReviewComments(projectId: string): ReviewComment[] {
   return getDb()
     .prepare("SELECT * FROM review_comments WHERE project_id = ? ORDER BY created_at DESC")
     .all(projectId) as unknown as ReviewComment[];
+}
+
+// ============ Cluster CRUD ============
+
+export function createCluster(cluster: Cluster): void {
+  getDb()
+    .prepare(`
+      INSERT INTO clusters (
+        id, name, brand_name, language, brief_source_path,
+        shared_summary_path, shared_checklist_path, cross_link_plan_path,
+        current_phase, status, blog_base_url, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    .run(
+      cluster.id, cluster.name, cluster.brand_name, cluster.language,
+      cluster.brief_source_path, cluster.shared_summary_path,
+      cluster.shared_checklist_path, cluster.cross_link_plan_path,
+      cluster.current_phase, cluster.status, cluster.blog_base_url,
+      cluster.created_at, cluster.updated_at
+    );
+}
+
+export function getCluster(clusterId: string): Cluster | null {
+  if (!clusterId) return null;
+  return (getDb().prepare("SELECT * FROM clusters WHERE id = ?").get(clusterId) as Cluster | undefined) || null;
+}
+
+export function listClusters(): Cluster[] {
+  return getDb()
+    .prepare("SELECT * FROM clusters ORDER BY updated_at DESC")
+    .all() as unknown as Cluster[];
+}
+
+export function updateClusterPhase(clusterId: string, phase: ClusterPhaseId, status: ProjectStatus = "active"): void {
+  getDb()
+    .prepare("UPDATE clusters SET current_phase = ?, status = ?, updated_at = ? WHERE id = ?")
+    .run(phase, status, new Date().toISOString(), clusterId);
+}
+
+export function deleteClusterRecords(clusterId: string): boolean {
+  const database = getDb();
+  const existing = database.prepare("SELECT id FROM clusters WHERE id = ?").get(clusterId) as { id: string } | undefined;
+  if (!existing) return false;
+  database.exec("BEGIN");
+  try {
+    database.prepare("DELETE FROM cluster_articles WHERE cluster_id = ?").run(clusterId);
+    database.prepare("DELETE FROM clusters WHERE id = ?").run(clusterId);
+    database.exec("COMMIT");
+    return true;
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
+}
+
+// ============ Cluster Article CRUD ============
+
+export function createClusterArticle(record: ClusterArticleRecord): void {
+  getDb()
+    .prepare(`
+      INSERT INTO cluster_articles (id, cluster_id, project_id, article_role, article_slug, article_type, target_word_min, target_word_max, sort_order)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `)
+    .run(
+      record.id, record.cluster_id, record.project_id,
+      record.article_role, record.article_slug, record.article_type,
+      record.target_word_min, record.target_word_max, record.sort_order
+    );
+}
+
+export function listClusterArticles(clusterId: string): ClusterArticleRecord[] {
+  return getDb()
+    .prepare("SELECT * FROM cluster_articles WHERE cluster_id = ? ORDER BY sort_order")
+    .all(clusterId) as unknown as ClusterArticleRecord[];
+}
+
+export function getClusterForProject(projectId: string): Cluster | null {
+  const record = getDb()
+    .prepare(`SELECT c.* FROM clusters c JOIN cluster_articles ca ON c.id = ca.cluster_id WHERE ca.project_id = ?`)
+    .get(projectId) as Cluster | undefined;
+  return record || null;
 }

@@ -2,7 +2,7 @@
 
 > 分支: `feature/multiple-essay-writing`
 > 基准: `main` (a4cc10c)
-> 总计: 8 次提交, 27 个文件变更, +4707 / -42 行
+> 总计: 10 次提交, 31 个文件变更, +4893 / -125 行
 
 ---
 
@@ -131,6 +131,17 @@
 | P2-6 | P2 | 互链验证误判 | 要求实际 URL/INTERNAL_LINK 标记 |
 | P2-7 | P2 | base_url 未传递 | 从 cluster.blog_base_url 读取传给 docx |
 | P2-8 | P2 | 批量审查缺去重 | 增加段落级内容重叠检测 |
+
+### 第四轮（P6-P9 后）— 6 个问题
+
+| # | 级别 | 问题 | 修复 |
+|---|---|---|---|
+| P1-1 | P1 | Phase 4 → Phase 5 阻塞 | cluster_phase4 加入手动审批列表，Phase 4 需批准才能进 Phase 5 |
+| P1-2 | P1 | 动态字数未传给 prompt | 全部 prompt 文件改为引用 brief 的 Target word count，不再硬编码 1200-1600 |
+| P1-3 | P1 | 互链规划未传给文章 Phase | Phase 1b 后复制 refined plan 到每篇文章的 inputs |
+| P2-4 | P2 | 二进制 brief 死胡同 | 返回 400 错误而非空 articles |
+| P2-5 | P2 | 混合链接解析错误 | 重写为统一的左到右单遍解析 |
+| P2-6 | P2 | 集群完成状态 | batch_confirm 批准后设为 completed |
 
 ---
 

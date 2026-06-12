@@ -293,6 +293,14 @@ async function generateFinalDocx(project: Project, useSlotArticle = false): Prom
   if (fs.existsSync(imagePlanPath)) {
     args.push("--image-plan", imagePlanPath);
   }
+  // Pass base-url for cluster articles with INTERNAL_LINK placeholders
+  try {
+    const { getClusterForProject } = await import("@/lib/db");
+    const cluster = getClusterForProject(project.id);
+    if (cluster?.blog_base_url) {
+      args.push("--base-url", cluster.blog_base_url);
+    }
+  } catch { /* not a cluster project, skip */ }
   await runPythonScript(args, {
     cwd: getSkillDir(),
     env: buildModelEnv(project),

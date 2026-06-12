@@ -53,7 +53,7 @@ IMAGE_RE = re.compile(r"!\[[^\]]*\]\([^)]*\)")
 BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 ITALIC_RE = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
 CODE_SPAN_RE = re.compile(r"`([^`]+)`")
-LINK_RE = re.compile(r"\[([^\]]+)\]\([^)]+\)")
+LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
 
 
 def load_image_plan(plan_path: Path | None) -> dict[str, dict[str, str]]:

@@ -26,6 +26,30 @@ function extractTextFromBinaryFile(filePath: string): string | null {
   return null;
 }
 
+/** Parse a refined cross-link plan markdown back into CrossLinkRule[] */
+function parseCrossLinkPlanMarkdown(content: string): import("@/lib/types").CrossLinkRule[] {
+  const rules: import("@/lib/types").CrossLinkRule[] = [];
+  const lines = content.split("\n");
+  let inTable = false;
+  for (const line of lines) {
+    if (line.includes("| Source") && line.includes("| Target")) { inTable = true; continue; }
+    if (line.includes("|---")) continue;
+    if (!inTable) continue;
+    if (!line.trim().startsWith("|")) { inTable = false; continue; }
+    const cells = line.split("|").map((c) => c.trim()).filter(Boolean);
+    if (cells.length >= 4) {
+      rules.push({
+        sourceSlug: cells[0],
+        targetSlug: cells[1],
+        anchorText: cells[2],
+        placementHint: cells[3] || "",
+        direction: (cells[4]?.includes("bidirectional") ? "bidirectional" : "unidirectional"),
+      });
+    }
+  }
+  return rules;
+}
+
 /**
  * Run Cluster Phase 0: Shared material reading + checklist generation.
  * This runs once for the entire cluster, producing shared outputs.
@@ -244,9 +268,15 @@ export async function runPhase1b(clusterId: string): Promise<void> {
       ]
     );
 
-    // Update cluster state
+    // Update cluster state with refined plan
     const updatedState = readClusterState(clusterId);
     updatedState.crossLinkPlanPath = crossLinkPath;
+    // Re-parse the refined cross-link plan into crossLinkRules
+    const refinedContent = fs.readFileSync(crossLinkPath, "utf-8");
+    const refinedRules = parseCrossLinkPlanMarkdown(refinedContent);
+    if (refinedRules.length > 0) {
+      updatedState.crossLinkRules = refinedRules;
+    }
     const { writeClusterState } = await import("@/lib/clusterState");
     writeClusterState(updatedState);
 
@@ -368,13 +398,15 @@ export function validateCrossLinks(clusterId: string): Array<{
     let missingBackLink = true;
 
     for (const rule of outgoingRules) {
-      // Check if the target slug appears in the article (as a link or plain text)
+      // Check for actual link markers: markdown link [text](url) or INTERNAL_LINK placeholder
       const targetSlug = rule.targetSlug.toLowerCase();
-      if (content.includes(targetSlug) || content.includes(rule.anchorText.toLowerCase())) {
+      const hasMarkdownLink = content.includes(`](${targetSlug})`) || content.includes(`](internal_link:${targetSlug})`);
+      const hasInternalLink = content.includes(`internal_link:${targetSlug}`);
+      if (hasMarkdownLink || hasInternalLink) {
         found++;
         details.push(`✓ ${rule.targetSlug}: "${rule.anchorText}"`);
       } else {
-        details.push(`✗ ${rule.targetSlug}: "${rule.anchorText}" — 未找到`);
+        details.push(`✗ ${rule.targetSlug}: "${rule.anchorText}" — 未找到实际链接`);
       }
     }
 
@@ -455,12 +487,45 @@ export async function generateBatchReview(clusterId: string): Promise<void> {
     lines.push("");
   }
 
-  lines.push("## 3. 总结", "");
+  // Check content overlap between articles
+  lines.push("## 3. 内容去重检查", "");
+  const articleContents = articles.map((article) => {
+    const articlePath = path.join(getOutputsDir(article.project_id), "03_full_article.md");
+    const content = fs.existsSync(articlePath) ? fs.readFileSync(articlePath, "utf-8") : "";
+    return { slug: article.article_slug, content };
+  });
+  let hasOverlap = false;
+  for (let i = 0; i < articleContents.length; i++) {
+    for (let j = i + 1; j < articleContents.length; j++) {
+      const a = articleContents[i];
+      const b = articleContents[j];
+      if (!a.content || !b.content) continue;
+      // Simple overlap check: find common paragraphs (>100 chars)
+      const aParagraphs = a.content.split("\n\n").filter((p) => p.trim().length > 100);
+      const bParagraphs = b.content.split("\n\n").filter((p) => p.trim().length > 100);
+      const overlaps: string[] = [];
+      for (const para of aParagraphs) {
+        const normalized = para.trim().toLowerCase();
+        if (bParagraphs.some((bp) => bp.trim().toLowerCase() === normalized)) {
+          overlaps.push(para.trim().slice(0, 80) + "...");
+        }
+      }
+      if (overlaps.length > 0) {
+        hasOverlap = true;
+        lines.push(`- ⚠ ${a.slug} 与 ${b.slug} 有 ${overlaps.length} 段重复内容`);
+        for (const ov of overlaps) lines.push(`  - "${ov}"`);
+      }
+    }
+  }
+  if (!hasOverlap) lines.push("- ✓ 未发现大段重复内容");
+
+  lines.push("", "## 4. 总结", "");
   const allChecklistPassed = checklistReports.every((r) => r.passed);
   lines.push(`- Checklist: ${allChecklistPassed ? "全部通过" : "部分未通过"}`);
   lines.push(`- 互链: ${allLinksOk ? "全部到位" : "存在缺失"}`);
+  lines.push(`- 内容去重: ${hasOverlap ? "存在重复" : "无重复"}`);
 
-  if (allChecklistPassed && allLinksOk) {
+  if (allChecklistPassed && allLinksOk && !hasOverlap) {
     lines.push("", "**集群审查通过，可以进入最终确认。**");
   } else {
     lines.push("", "**集群审查存在问题，请检查上述项目。**");

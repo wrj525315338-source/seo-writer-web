@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCluster, listClusterArticles } from "@/lib/db";
 import { readClusterState, approveClusterPhase, setClusterPhaseStatus } from "@/lib/clusterState";
 import { runClusterPhase0, runPhase1b, checkClusterPhaseCompletion, generateBatchReview } from "@/lib/clusterRunner";
-import { runPhase, approvePhase } from "@/lib/phaseRunner";
+import { runPhase, runPhase4Chunked, approvePhase } from "@/lib/phaseRunner";
 import { readOutputForPhase, getClusterDir } from "@/lib/fileStorage";
 import { sanitizeError } from "@/lib/validators";
 import type { ClusterPhaseId, PhaseId } from "@/lib/types";
@@ -40,7 +40,12 @@ async function runPhaseForAllArticles(
 
   for (const article of articles) {
     try {
-      await runPhase(article.project_id, articlePhase);
+      // Use chunked mode for Phase 4 (long articles need chunked audit)
+      if (articlePhase === "phase4") {
+        await runPhase4Chunked(article.project_id);
+      } else {
+        await runPhase(article.project_id, articlePhase);
+      }
     } catch (error) {
       const msg = `${article.article_slug} ${articlePhase} 失败: ${sanitizeError(error)}`;
       setClusterPhaseStatus(clusterId, clusterPhase, "failed", msg);

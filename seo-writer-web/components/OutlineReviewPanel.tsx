@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { encodeProjectId } from "@/lib/routeParams";
 import type { ClusterState } from "@/lib/types";
 
@@ -24,6 +25,7 @@ export default function OutlineReviewPanel({
   crossLinkPlan,
   onApprove,
 }: OutlineReviewPanelProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("all");
   const [comment, setComment] = useState("");
   const [commentScope, setCommentScope] = useState<"global" | "article">("global");
@@ -46,6 +48,7 @@ export default function OutlineReviewPanel({
         return;
       }
       onApprove();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
     } finally {

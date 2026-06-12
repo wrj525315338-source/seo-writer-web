@@ -60,16 +60,12 @@ export async function POST(request: NextRequest) {
     fs.writeFileSync(tempFilePath, Buffer.from(await briefFile.arrayBuffer()));
 
     try {
-      // Parse the brief (Layer 1 only - no LLM for preview)
-      const parsed = await parseClusterBrief(tempFilePath);
-
-      // Read the extracted text content for the client to use during creation
-      let briefContent = "";
       const ext = briefFile.name.split(".").pop()?.toLowerCase() || "";
-      if (["docx", "doc", "xlsx", "xlsm"].includes(ext)) {
-        // For binary formats, read the extracted text that the parser already produced
-        // The parser extracts to tempFilePath.extracted.md but cleans it up,
-        // so we re-extract here for the client
+      const isBinary = ["docx", "doc", "xlsx", "xlsm"].includes(ext);
+
+      // Extract text content for binary formats
+      let briefContent = "";
+      if (isBinary) {
         const { execFileSync } = await import("node:child_process");
         const extractOutPath = tempFilePath + ".for_client.md";
         const scriptPath = path.join(process.cwd(), "..", "skills", "seo-article-writer", "scripts", "extract_materials.py");
@@ -84,10 +80,35 @@ export async function POST(request: NextRequest) {
         briefContent = fs.readFileSync(tempFilePath, "utf-8");
       }
 
+      // Parse the brief (Layer 1 only - no LLM for preview)
+      let parsed;
+      try {
+        parsed = await parseClusterBrief(tempFilePath);
+      } catch {
+        // Binary formats may fail local parsing - return empty articles with warning
+        if (isBinary) {
+          parsed = {
+            clusterName: "未命名集群",
+            brandName: "",
+            language: "English",
+            articles: [],
+            crossLinkRules: [],
+            specialRequirements: { bannedCompetitors: [], brandData: [], requiredModules: [], collisionWarnings: [], antiAiRules: [] },
+            sourceType: "docx" as const,
+          };
+        } else {
+          throw new Error("Brief 解析失败，请检查文件格式。");
+        }
+      }
+
+      const needsLlm = isBinary && parsed.articles.length === 0;
+
       return NextResponse.json({
         parsed,
         briefContent,
         originalFileName: briefFile.name,
+        needsLlm,
+        warning: needsLlm ? "二进制格式需要 LLM 解析文章列表。请改用 .md 格式，或在创建后手动配置文章。" : undefined,
       });
     } finally {
       // Clean up temp file after parsing

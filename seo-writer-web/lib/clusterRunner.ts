@@ -149,6 +149,77 @@ export async function runClusterPhase0(clusterId: string): Promise<void> {
 }
 
 /**
+ * Run Cluster Phase 1b: Cross-link plan refinement.
+ * Reads all approved outlines and refines the cross-link plan.
+ */
+export async function runPhase1b(clusterId: string): Promise<void> {
+  const cluster = getCluster(clusterId);
+  if (!cluster) throw new Error(`集群不存在: ${clusterId}`);
+
+  const state = readClusterState(clusterId);
+  const articles = listClusterArticles(clusterId);
+  const clusterDir = getClusterDir(clusterId);
+  const outputsDir = path.join(clusterDir, "outputs");
+  fs.mkdirSync(outputsDir, { recursive: true });
+
+  setClusterPhaseStatus(clusterId, "cluster_phase1b", "running");
+
+  try {
+    // Read each article's approved outline
+    const outlineParts: string[] = [];
+    for (const article of articles) {
+      const projectDir = path.join(getClusterStorageRoot(), "..", "projects", article.project_id);
+      const outlinePath = path.join(projectDir, "outputs", "01_outline.md");
+      if (fs.existsSync(outlinePath)) {
+        outlineParts.push(`## Article: ${article.article_slug} (${article.article_role})\n\n${fs.readFileSync(outlinePath, "utf-8")}`);
+      }
+    }
+
+    // Read current cross-link plan
+    const crossLinkPath = path.join(clusterDir, "00_cross_link_plan.md");
+    const crossLinkContent = fs.existsSync(crossLinkPath) ? fs.readFileSync(crossLinkPath, "utf-8") : "";
+
+    // Build input for Phase 1b prompt
+    const inputContent = [
+      "# Approved Outlines",
+      ...outlineParts,
+      "---",
+      "# Current Cross-Link Plan",
+      crossLinkContent,
+    ].join("\n\n");
+
+    const inputPath = path.join(outputsDir, "phase1b_input.md");
+    fs.writeFileSync(inputPath, inputContent, "utf-8");
+
+    // Use the first article's project for model config
+    const firstProject = getProject(articles[0].project_id);
+    if (!firstProject) throw new Error("集群中没有文章项目");
+
+    // Run Phase 1b skill prompt
+    await runSkillPrompt(
+      firstProject,
+      [
+        "scripts/run_prompt.py",
+        "--prompt", "prompts/phase1b_cross_link_refine.md",
+        "--input", inputPath,
+        "--output", crossLinkPath,
+      ]
+    );
+
+    // Update cluster state
+    const updatedState = readClusterState(clusterId);
+    updatedState.crossLinkPlanPath = crossLinkPath;
+    const { writeClusterState } = await import("@/lib/clusterState");
+    writeClusterState(updatedState);
+
+    setClusterPhaseStatus(clusterId, "cluster_phase1b", "waiting_review");
+  } catch (error) {
+    setClusterPhaseStatus(clusterId, "cluster_phase1b", "failed", String(error));
+    throw error;
+  }
+}
+
+/**
  * Run a cluster phase that dispatches to per-article execution.
  * Each article runs the corresponding single-article phase independently.
  */

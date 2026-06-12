@@ -24,8 +24,8 @@ The draft must:
 - include direct answer sentences where useful
 - avoid keyword stuffing
 - follow the approved outline
-- follow the approved word budget for the first two H2 sections; for a 1200-1600 word final article, the first two H2 sections should normally total about 350-550 words unless the outline assigns a different budget
-- write compactly and avoid adding extra examples, long transitions, or repeated product explanations that would push the final article over 1600 words
+- follow the approved word budget for the first two H2 sections; the first two H2 sections should normally total about 15-20% of the target word count unless the outline assigns a different budget
+- write compactly and avoid adding extra examples, long transitions, or repeated product explanations that would push the final article over the target word count
 - include any table required by the approved outline within the first two H2 sections
 - introduce products/tools only with natural context
 - obey all brand, competitor, forbidden word, forbidden symbol, and PR rules

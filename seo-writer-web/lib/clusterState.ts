@@ -94,7 +94,9 @@ export function approveClusterPhase(clusterId: string, phase: ClusterPhaseId): C
   writeClusterState(state);
   // Also update the DB so GET /api/clusters returns correct phase
   try {
-    updateClusterPhase(clusterId, nextPhase);
+    // Mark as completed if this is the final phase
+    const isFinalPhase = idx === CLUSTER_PHASES.length - 1;
+    updateClusterPhase(clusterId, nextPhase, isFinalPhase ? "completed" : "active");
   } catch { /* non-fatal: JSON state is authoritative */ }
   return state;
 }

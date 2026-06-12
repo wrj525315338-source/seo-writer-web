@@ -101,14 +101,19 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      const needsLlm = isBinary && parsed.articles.length === 0;
+      if (isBinary && parsed.articles.length === 0) {
+        return NextResponse.json({
+          error: "无法从二进制格式中自动解析文章列表。请改用 .md 或 .txt 格式的 brief 文件。",
+          parsed: null,
+          briefContent,
+          originalFileName: briefFile.name,
+        }, { status: 400 });
+      }
 
       return NextResponse.json({
         parsed,
         briefContent,
         originalFileName: briefFile.name,
-        needsLlm,
-        warning: needsLlm ? "二进制格式需要 LLM 解析文章列表。请改用 .md 格式，或在创建后手动配置文章。" : undefined,
       });
     } finally {
       // Clean up temp file after parsing

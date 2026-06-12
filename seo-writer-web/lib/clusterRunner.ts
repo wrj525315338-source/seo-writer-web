@@ -280,6 +280,13 @@ export async function runPhase1b(clusterId: string): Promise<void> {
     const { writeClusterState } = await import("@/lib/clusterState");
     writeClusterState(updatedState);
 
+    // Copy refined cross-link plan into each article's inputs for Phase 2/3
+    for (const article of articles) {
+      const articleInputsDir = getInputsDir(article.project_id);
+      fs.mkdirSync(articleInputsDir, { recursive: true });
+      fs.copyFileSync(crossLinkPath, path.join(articleInputsDir, "cross_link_plan.md"));
+    }
+
     setClusterPhaseStatus(clusterId, "cluster_phase1b", "waiting_review");
   } catch (error) {
     setClusterPhaseStatus(clusterId, "cluster_phase1b", "failed", String(error));

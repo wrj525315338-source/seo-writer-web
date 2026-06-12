@@ -15,7 +15,7 @@ Process:
 2. Read the writing guidelines completely.
 3. Extract hard rules: structure, forbidden wording, brand rules, competitor rules, SEO/GEO/AIO rules, language style rules, product-context content rules, formatting rules, checklist items, red lines, and deferred image rules for Phase 5.5 only.
 4. Analyze example articles only for patterns: title stack, opening, H2/H3 hierarchy, paragraph length, transition style, table usage, FAQ style, product insertion, and approximate article length.
-5. Identify the current task: topic, primary keyword, secondary keywords, search intent, target reader, article type, word count, and risks. Unless the user gives a stricter range, the final visible article text must be 1200-1600 words.
+5. Identify the current task: topic, primary keyword, secondary keywords, search intent, target reader, article type, word count, and risks. Use the word count range from the brief's "Target word count" field; if not specified, default to 1200-1600 words.
 6. Write `outputs/<project_slug>/00_material_reading_summary.md`.
 7. Generate `outputs/<project_slug>/00_writing_checklist.md` from the extracted writing standards and `language_content_requirements.md`.
 
@@ -74,7 +74,7 @@ Requirements:
 - Use sourced facts when the guidelines require data; do not invent facts.
 - Mark uncertain claims as requiring user confirmation or avoid presenting them as facts.
 - Include all tables required by the outline.
-- Keep the final visible article text within 1200-1600 words, including headings, tables, and FAQ, and excluding SEO metadata. If the draft is too long, compress repeated examples, generic transitions, and over-explained product details before adding more content.
+- Keep the final visible article text within the word count range from the brief's "Target word count" field (default 1200-1600 words), including headings, tables, and FAQ, and excluding SEO metadata. If the draft is too long, compress repeated examples, generic transitions, and over-explained product details before adding more content.
 - Do not include image descriptions, AI image prompts, image insertion suggestions, markdown image syntax, `IMAGE_PLACEHOLDER`, or `[IMAGE_1]` placeholders.
 - Apply general language style requirements from `language_content_requirements.md`.
 - Apply product-context content requirements only when they match the active product writing guidelines.
@@ -116,7 +116,7 @@ Requirements:
 - Do not generate image prompts, image placeholders, `image_prompts.md`, `images.json`, or `image_plan.json` in Phase 5.
 - If the user gives human review comments after preview, revise `03_full_article.md` surgically according to both the human comment and the Phase 4 checklist/auditor reports. Do not broadly rewrite compliant sections.
 - After the surgical revision, run a stabilization pass against the fixed checklist before returning to Phase 4. The stabilization pass should make only the smallest necessary edits and should avoid introducing new facts, claims, examples, sections, or product details.
-- Keep the article within 1200-1600 words, then return to Phase 4 for a fresh checklist validation.
+- Keep the article within the word count range from the brief's "Target word count" field (default 1200-1600 words), then return to Phase 4 for a fresh checklist validation.
 - After the user confirms Phase 5, regenerate the Word file once more from the latest `03_full_article.md`.
 
 Outputs:

@@ -22,6 +22,7 @@ const CLUSTER_TO_ARTICLE_PHASE: Partial<Record<ClusterPhaseId, PhaseId>> = {
 const CLUSTER_MANUAL_REVIEW_PHASES: ClusterPhaseId[] = [
   "cluster_phase1",
   "cluster_phase1b",
+  "cluster_phase4",
   "cluster_phase5",
   "cluster_batch_confirm",
 ];

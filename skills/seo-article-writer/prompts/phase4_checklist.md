@@ -23,7 +23,7 @@ Check every applicable item from `00_writing_checklist.md`, including:
 - required product modules
 - competitor rules
 - PR red lines
-- final visible article length: 1200-1600 words unless the project brief gives a stricter range
+- final visible article length: use the word count range from the project brief's "Target word count" field; if not specified, default to 1200-1600 words
 - formatting and Google Docs suitability
 - unsupported factual claims
 

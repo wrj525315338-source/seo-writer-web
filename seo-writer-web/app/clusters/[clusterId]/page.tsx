@@ -36,12 +36,14 @@ export default async function ClusterDetailPage({
   // Determine which views are available
   const isOutlineReview = currentPhase === "cluster_phase1" && currentPhaseState?.status === "waiting_review";
   const isCrossLinkReview = currentPhase === "cluster_phase1b" && currentPhaseState?.status === "waiting_review";
+  const isChecklistReview = currentPhase === "cluster_phase4" && currentPhaseState?.status === "waiting_review";
   const isArticleReview = currentPhase === "cluster_phase5" && currentPhaseState?.status === "waiting_review";
   const isBatchReview = currentPhase === "cluster_batch_confirm" && currentPhaseState?.status === "waiting_review";
 
   // Default view based on current phase
   const defaultView = isOutlineReview ? "outlines"
     : isCrossLinkReview ? "crosslink"
+    : isChecklistReview ? "checklist"
     : isArticleReview ? "articles"
     : isBatchReview ? "batch"
     : "dashboard";
@@ -57,6 +59,12 @@ export default async function ClusterDetailPage({
   const fullArticles = articles.map((article) => {
     let content = "";
     try { content = readOutputForPhase(article.project_id, "phase3"); } catch { /* */ }
+    return { slug: article.article_slug, role: article.article_role, projectId: article.project_id, content };
+  });
+
+  const checklistReports = articles.map((article) => {
+    let content = "";
+    try { content = readOutputForPhase(article.project_id, "phase4"); } catch { /* */ }
     return { slug: article.article_slug, role: article.article_role, projectId: article.project_id, content };
   });
 
@@ -88,6 +96,7 @@ export default async function ClusterDetailPage({
           { key: "dashboard", label: "Dashboard" },
           isOutlineReview ? { key: "outlines", label: "大纲审阅" } : null,
           isCrossLinkReview ? { key: "crosslink", label: "互链审阅" } : null,
+          isChecklistReview ? { key: "checklist", label: "Checklist 审阅" } : null,
           isArticleReview ? { key: "articles", label: "文章审阅" } : null,
           isBatchReview ? { key: "batch", label: "批量确认" } : null,
         ].filter((tab): tab is { key: string; label: string } => tab !== null).map((tab) => (
@@ -128,6 +137,15 @@ export default async function ClusterDetailPage({
 
       {viewMode === "crosslink" && isCrossLinkReview && (
         <CrossLinkApprovalView clusterId={clusterId} crossLinkPlan={crossLinkPlan} />
+      )}
+
+      {viewMode === "checklist" && isChecklistReview && (
+        <ClusterArticleReview
+          clusterId={clusterId}
+          articles={checklistReports}
+          onApprove={() => {}}
+          approvePhase="cluster_phase4"
+        />
       )}
 
       {viewMode === "articles" && isArticleReview && (

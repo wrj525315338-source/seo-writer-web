@@ -37,7 +37,7 @@ This chunk audit only checks **local rules** — rules that can be verified with
 
 If a checklist item clearly falls into one of the excluded categories above, skip it silently. Do not report it as a violation.
 
-Do not judge whole-article length from one chunk. Whole-article length is checked in the final Phase 4 merge step against the 1200-1600 word target.
+Do not judge whole-article length from one chunk. Whole-article length is checked in the final Phase 4 merge step against the word count range from the project brief.
 
 Do not audit image placement, image prompt placeholders, image descriptions, or image count in Phase 4 chunks. Image planning is deferred to Phase 5.5.
 

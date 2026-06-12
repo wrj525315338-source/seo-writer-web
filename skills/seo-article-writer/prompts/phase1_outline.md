@@ -43,9 +43,9 @@ All explanations, section purposes, coverage notes, placement notes, table plans
 
 ## Length Planning Rule
 
-- 最终可见正文必须控制在 1200-1600 words，除非用户在本项目中给出更严格的范围。
+- 最终可见正文的字数范围必须遵循文章 brief 中的 “Target word count” 字段。该字段格式为 “min-max words”。如果 brief 中未指定，默认 1200-1600 words。
 - 计数范围包括 H1/H2/H3、正文段落、表格文字和 FAQ；不包括 SEO Title、Meta description、URL slug、prompt、checklist report、图片规划文件。
-- 大纲必须给出“全文目标字数”和每个 H2/FAQ 的字数预算。预算合计必须落在 1200-1600 words。
+- 大纲必须给出”全文目标字数”和每个 H2/FAQ 的字数预算。预算合计必须落在 brief 指定的字数范围内。
 - 参照示例文章的紧凑度：优先信息密度和具体动作，避免把一个点扩写成多个泛泛段落。
 - 如果需要表格，表格应服务于压缩信息，而不是额外拉长文章。
 

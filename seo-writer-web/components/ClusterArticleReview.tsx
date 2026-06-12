@@ -15,9 +15,10 @@ interface ClusterArticleReviewProps {
   clusterId: string;
   articles: ArticleData[];
   onApprove: () => void;
+  approvePhase?: "cluster_phase4" | "cluster_phase5";
 }
 
-export default function ClusterArticleReview({ clusterId, articles, onApprove }: ClusterArticleReviewProps) {
+export default function ClusterArticleReview({ clusterId, articles, onApprove, approvePhase = "cluster_phase5" }: ClusterArticleReviewProps) {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
   const [approving, setApproving] = useState(false);
@@ -32,7 +33,7 @@ export default function ClusterArticleReview({ clusterId, articles, onApprove }:
       const response = await fetch(`/api/clusters/${clusterId}/phase`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "approve", phase: "cluster_phase5" }),
+        body: JSON.stringify({ action: "approve", phase: approvePhase }),
       });
       if (!response.ok) {
         const data = await response.json();

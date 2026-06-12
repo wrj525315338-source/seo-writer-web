@@ -149,68 +149,47 @@ def add_runs_with_inline_format(paragraph, text: str, base_url: str = "") -> Non
     """Parse inline markdown and add formatted runs to a paragraph."""
     text = IMAGE_RE.sub("", text)
 
-    # Process internal links as hyperlinks
-    def replace_internal_link(match):
-        anchor = match.group(1)
-        slug = match.group(2)
-        if base_url:
-            url = base_url.rstrip("/") + "/" + slug.lstrip("/")
-            add_hyperlink(paragraph, anchor, url)
-        else:
-            paragraph.add_run(anchor)
-        return ""
-
-    # Process regular markdown links as hyperlinks
-    def replace_link(match):
-        anchor = match.group(1)
-        url = match.group(2)
-        if url.startswith("/") and base_url:
-            url = base_url.rstrip("/") + url
-        if url.startswith("http"):
-            add_hyperlink(paragraph, anchor, url)
-        else:
-            paragraph.add_run(anchor)
-        return ""
-
-    # First handle internal links, then regular links
-    # We need to process links individually since add_hyperlink modifies the paragraph
-    last_end = 0
+    # Collect all link matches (both internal and regular) sorted by position
+    all_links = []
     for match in INTERNAL_LINK_RE.finditer(text):
-        # Add text before the link
-        before = text[last_end:match.start()]
+        all_links.append(("internal", match.start(), match.end(), match.group(1), match.group(2)))
+    for match in LINK_RE.finditer(text):
+        # Skip if this overlaps with an INTERNAL_LINK (which takes precedence)
+        start, end = match.start(), match.end()
+        if any(t == "internal" and s <= start and end <= e for t, s, e, _, _ in all_links):
+            continue
+        all_links.append(("regular", start, end, match.group(1), match.group(2)))
+    all_links.sort(key=lambda x: x[1])
+
+    # Process text left-to-right: plain segments + link segments
+    last_end = 0
+    for link_type, start, end, anchor, url_or_slug in all_links:
+        # Add plain text before this link
+        before = text[last_end:start]
         if before:
             _add_formatted_runs(paragraph, before)
+
         # Add the hyperlink
-        anchor = match.group(1)
-        slug = match.group(2)
-        if base_url:
-            url = base_url.rstrip("/") + "/" + slug.lstrip("/")
-            add_hyperlink(paragraph, anchor, url)
+        if link_type == "internal":
+            if base_url:
+                url = base_url.rstrip("/") + "/" + url_or_slug.lstrip("/")
+                add_hyperlink(paragraph, anchor, url)
+            else:
+                paragraph.add_run(anchor)
         else:
-            paragraph.add_run(anchor)
-        last_end = match.end()
+            url = url_or_slug
+            if url.startswith("/") and base_url:
+                url = base_url.rstrip("/") + url
+            if url.startswith("http"):
+                add_hyperlink(paragraph, anchor, url)
+            else:
+                paragraph.add_run(anchor)
+        last_end = end
 
-    # Process remaining text (after last internal link)
+    # Add remaining text after last link
     remaining = text[last_end:]
-    # Now handle regular links in remaining text
-    regular_last_end = 0
-    for match in LINK_RE.finditer(remaining):
-        before = remaining[regular_last_end:match.start()]
-        if before:
-            _add_formatted_runs(paragraph, before)
-        anchor = match.group(1)
-        url = match.group(2)
-        if url.startswith("/") and base_url:
-            url = base_url.rstrip("/") + url
-        if url.startswith("http"):
-            add_hyperlink(paragraph, anchor, url)
-        else:
-            paragraph.add_run(anchor)
-        regular_last_end = match.end()
-
-    final_remaining = remaining[regular_last_end:]
-    if final_remaining:
-        _add_formatted_runs(paragraph, final_remaining)
+    if remaining:
+        _add_formatted_runs(paragraph, remaining)
 
 
 def _add_formatted_runs(paragraph, text: str) -> None:

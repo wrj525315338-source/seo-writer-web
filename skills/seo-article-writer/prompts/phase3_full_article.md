@@ -29,9 +29,9 @@ The full article must:
 - leave one blank line after the URL line, then write the H1
 - treat the Chinese outline notes as planning guidance only and write the article body in the project-requested article language
 - follow the approved outline
-- keep the final visible article text within 1200-1600 words unless the user gives a stricter range
+- keep the final visible article text within the word count range specified in the article brief's "Target word count" field; if not specified, default to 1200-1600 words
 - count visible article text including headings, body paragraphs, tables, and FAQ; exclude SEO metadata, prompts, checklist reports, and image planning files
-- follow the section-level word budget from the approved outline; if the outline lacks a budget, create a compact 1200-1600 word allocation before writing
+- follow the section-level word budget from the approved outline; if the outline lacks a budget, create a compact word allocation matching the brief's target range before writing
 - if the draft starts running long, compress repeated examples, generic learning advice, long transitions, and over-explained product details instead of adding more sections
 - keep the approved tone, paragraph rhythm, style density, and product-placement pattern from the polished `02_first_two_sections.md`
 - use clear H1/H2/H3 hierarchy

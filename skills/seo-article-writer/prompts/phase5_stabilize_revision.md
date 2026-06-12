@@ -20,7 +20,7 @@ Internally check the revised article against:
 - brand/product data rules
 - forbidden words, punctuation, competitors, and PR red lines
 - top metadata block
-- 1200-1600 visible words
+- visible word count matching the brief's "Target word count" range
 - no image prompts, image placeholders, image descriptions, or Phase 6 content
 
 Then make only the smallest necessary edits.

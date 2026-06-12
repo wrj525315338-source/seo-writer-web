@@ -43,7 +43,7 @@ Read the provided writing guidelines, example articles, and topic requirements. 
    - search intent
    - target reader
    - article type
-   - word count; unless the user gives a stricter range, set the target final article length to 1200-1600 words based on the example article pattern
+   - word count; use the range specified in the brief's "Target word count" field; if not specified, set the target final article length to 1200-1600 words based on the example article pattern
    - deferred image requirements, if provided
    - special product angle
 4. Identify potential risks before outlining.

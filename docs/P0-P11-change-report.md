@@ -2,7 +2,7 @@
 
 > 分支: `feature/multiple-essay-writing`
 > 基准: `main` (a4cc10c)
-> 总计: 5 次提交, 26 个文件变更, +4588 / -25 行
+> 总计: 8 次提交, 27 个文件变更, +4707 / -42 行
 
 ---
 
@@ -118,6 +118,19 @@
 | P2-8 | P2 | 二进制 brief 损坏 | 跳过 File.text()，用服务器端提取 |
 | P2-9 | P2 | DB 状态不同步 | approveClusterPhase 同时更新 DB |
 | P2-10 | P2 | 路径假设错误 | 用 getProjectDir/getOutputsDir |
+
+### 第三轮（P6-P9 后）— 8 个问题
+
+| # | 级别 | 问题 | 修复 |
+|---|---|---|---|
+| P1-1 | P1 | LINK_RE 没有捕获 URL | 正则改为两个捕获组 |
+| P1-2 | P1 | 二进制 brief 无法解析 | parse API 返回空 articles + warning 而非抛异常 |
+| P1-3 | P1 | 互链规则未更新 | Phase 1b 后重新解析 crossLinkRules |
+| P2-4 | P2 | Phase 4 未用 chunked | 改用 runPhase4Chunked |
+| P2-5 | P2 | 大纲审批后不刷新 | 加 router.refresh() |
+| P2-6 | P2 | 互链验证误判 | 要求实际 URL/INTERNAL_LINK 标记 |
+| P2-7 | P2 | base_url 未传递 | 从 cluster.blog_base_url 读取传给 docx |
+| P2-8 | P2 | 批量审查缺去重 | 增加段落级内容重叠检测 |
 
 ---
 

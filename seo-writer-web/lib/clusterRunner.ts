@@ -339,3 +339,135 @@ export function getClusterProgress(clusterId: string): Array<{
     };
   });
 }
+
+/**
+ * Validate cross-links in each article against the cluster's cross-link plan.
+ * Returns a report of found/missing links per article.
+ */
+export function validateCrossLinks(clusterId: string): Array<{
+  slug: string;
+  totalRequired: number;
+  found: number;
+  missingBackLink: boolean;
+  details: string[];
+}> {
+  const state = readClusterState(clusterId);
+  const articles = listClusterArticles(clusterId);
+  const rules = state.crossLinkRules;
+
+  return articles.map((article) => {
+    const articlePath = path.join(getOutputsDir(article.project_id), "03_full_article.md");
+    if (!fs.existsSync(articlePath)) {
+      return { slug: article.article_slug, totalRequired: 0, found: 0, missingBackLink: true, details: ["文章尚未生成"] };
+    }
+
+    const content = fs.readFileSync(articlePath, "utf-8").toLowerCase();
+    const outgoingRules = rules.filter((r) => r.sourceSlug === article.article_slug);
+    const details: string[] = [];
+    let found = 0;
+    let missingBackLink = true;
+
+    for (const rule of outgoingRules) {
+      // Check if the target slug appears in the article (as a link or plain text)
+      const targetSlug = rule.targetSlug.toLowerCase();
+      if (content.includes(targetSlug) || content.includes(rule.anchorText.toLowerCase())) {
+        found++;
+        details.push(`✓ ${rule.targetSlug}: "${rule.anchorText}"`);
+      } else {
+        details.push(`✗ ${rule.targetSlug}: "${rule.anchorText}" — 未找到`);
+      }
+    }
+
+    // Check back-link to pillar
+    const pillarArticle = articles.find((a) => a.article_role === "pillar");
+    if (pillarArticle && article.article_role !== "pillar") {
+      const hasBackLink = rules.some(
+        (r) => r.sourceSlug === article.article_slug && r.targetSlug === pillarArticle.article_slug
+      );
+      missingBackLink = !hasBackLink;
+    } else {
+      missingBackLink = false;
+    }
+
+    return {
+      slug: article.article_slug,
+      totalRequired: outgoingRules.length,
+      found,
+      missingBackLink,
+      details,
+    };
+  });
+}
+
+/**
+ * Generate a batch review report for the entire cluster.
+ * Checks cross-links, content overlap, and creates a summary.
+ */
+export async function generateBatchReview(clusterId: string): Promise<void> {
+  const state = readClusterState(clusterId);
+  const articles = listClusterArticles(clusterId);
+  const clusterDir = getClusterDir(clusterId);
+
+  // Validate cross-links
+  const crossLinkReport = validateCrossLinks(clusterId);
+
+  // Collect checklist reports
+  const checklistReports = articles.map((article) => {
+    const reportPath = path.join(getOutputsDir(article.project_id), "04_checklist_report.md");
+    let content = "";
+    if (fs.existsSync(reportPath)) {
+      content = fs.readFileSync(reportPath, "utf-8");
+    }
+    const passed = content.includes("checklist_passed: true");
+    return { slug: article.article_slug, role: article.article_role, passed, content };
+  });
+
+  // Build batch review markdown
+  const lines: string[] = [
+    "# 集群批量审查报告",
+    "",
+    `集群: ${state.clusterName}`,
+    `文章数: ${articles.length}`,
+    `互链规则: ${state.crossLinkRules.length} 条`,
+    "",
+    "## 1. 文章状态",
+    "",
+  ];
+
+  for (const report of checklistReports) {
+    lines.push(`- **${report.slug}** (${report.role}): ${report.passed ? "✓ Checklist 通过" : "✗ Checklist 未通过"}`);
+  }
+
+  lines.push("", "## 2. 互链验证", "");
+
+  let allLinksOk = true;
+  for (const report of crossLinkReport) {
+    lines.push(`### ${report.slug}`);
+    lines.push(`- 需要: ${report.totalRequired} 条出链, 找到: ${report.found} 条`);
+    if (report.missingBackLink) {
+      lines.push(`- ⚠ 缺少指向 Pillar 的回链`);
+      allLinksOk = false;
+    }
+    for (const detail of report.details) {
+      lines.push(`  - ${detail}`);
+    }
+    if (report.found < report.totalRequired) allLinksOk = false;
+    lines.push("");
+  }
+
+  lines.push("## 3. 总结", "");
+  const allChecklistPassed = checklistReports.every((r) => r.passed);
+  lines.push(`- Checklist: ${allChecklistPassed ? "全部通过" : "部分未通过"}`);
+  lines.push(`- 互链: ${allLinksOk ? "全部到位" : "存在缺失"}`);
+
+  if (allChecklistPassed && allLinksOk) {
+    lines.push("", "**集群审查通过，可以进入最终确认。**");
+  } else {
+    lines.push("", "**集群审查存在问题，请检查上述项目。**");
+  }
+
+  // Write the report
+  const reportPath = path.join(clusterDir, "outputs", "cluster_batch_review.md");
+  fs.mkdirSync(path.dirname(reportPath), { recursive: true });
+  fs.writeFileSync(reportPath, lines.join("\n"), "utf-8");
+}

@@ -8,6 +8,8 @@ import { readOutputForPhase, getClusterDir } from "@/lib/fileStorage";
 import ClusterDashboard from "@/components/ClusterDashboard";
 import OutlineReviewPanel from "@/components/OutlineReviewPanel";
 import CrossLinkApprovalView from "@/components/CrossLinkApprovalView";
+import BatchReviewView from "@/components/BatchReviewView";
+import ClusterArticleReview from "@/components/ClusterArticleReview";
 
 export const dynamic = "force-dynamic";
 
@@ -28,39 +30,47 @@ export default async function ClusterDetailPage({
   const progress = getClusterProgress(clusterId);
   const articles = listClusterArticles(clusterId);
 
-  // Get outlines for each article
+  const currentPhase = state.currentPhase;
+  const currentPhaseState = state.phases[currentPhase];
+
+  // Determine which views are available
+  const isOutlineReview = currentPhase === "cluster_phase1" && currentPhaseState?.status === "waiting_review";
+  const isCrossLinkReview = currentPhase === "cluster_phase1b" && currentPhaseState?.status === "waiting_review";
+  const isArticleReview = currentPhase === "cluster_phase5" && currentPhaseState?.status === "waiting_review";
+  const isBatchReview = currentPhase === "cluster_batch_confirm" && currentPhaseState?.status === "waiting_review";
+
+  // Default view based on current phase
+  const defaultView = isOutlineReview ? "outlines"
+    : isCrossLinkReview ? "crosslink"
+    : isArticleReview ? "articles"
+    : isBatchReview ? "batch"
+    : "dashboard";
+  const viewMode = view || defaultView;
+
+  // Read data for each view
   const outlines = articles.map((article) => {
     let content = "";
-    try {
-      content = readOutputForPhase(article.project_id, "phase1");
-    } catch {
-      // outline not yet generated
-    }
-    return {
-      slug: article.article_slug,
-      role: article.article_role,
-      projectId: article.project_id,
-      content,
-    };
+    try { content = readOutputForPhase(article.project_id, "phase1"); } catch { /* */ }
+    return { slug: article.article_slug, role: article.article_role, projectId: article.project_id, content };
   });
 
-  // Read cross-link plan
+  const fullArticles = articles.map((article) => {
+    let content = "";
+    try { content = readOutputForPhase(article.project_id, "phase3"); } catch { /* */ }
+    return { slug: article.article_slug, role: article.article_role, projectId: article.project_id, content };
+  });
+
   let crossLinkPlan = "";
   try {
     const planPath = path.join(getClusterDir(clusterId), "00_cross_link_plan.md");
-    if (fs.existsSync(planPath)) {
-      crossLinkPlan = fs.readFileSync(planPath, "utf-8");
-    }
-  } catch {
-    // ignore
-  }
+    if (fs.existsSync(planPath)) crossLinkPlan = fs.readFileSync(planPath, "utf-8");
+  } catch { /* */ }
 
-  const currentPhase = state.currentPhase;
-  const currentPhaseState = state.phases[currentPhase];
-  const isOutlineReview = currentPhase === "cluster_phase1" && currentPhaseState?.status === "waiting_review";
-  const isCrossLinkReview = currentPhase === "cluster_phase1b" && currentPhaseState?.status === "waiting_review";
-
-  const viewMode = view || (isOutlineReview ? "outlines" : "dashboard");
+  let batchReview = "";
+  try {
+    const reviewPath = path.join(getClusterDir(clusterId), "outputs", "cluster_batch_review.md");
+    if (fs.existsSync(reviewPath)) batchReview = fs.readFileSync(reviewPath, "utf-8");
+  } catch { /* */ }
 
   return (
     <main className="page">
@@ -73,50 +83,29 @@ export default async function ClusterDetailPage({
         </div>
       </div>
 
-      <nav style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", borderBottom: "1px solid #e5e7eb", paddingBottom: "0.5rem" }}>
-        <a
-          href={`/clusters/${clusterId}`}
-          style={{
-            padding: "0.4rem 0.75rem",
-            textDecoration: "none",
-            color: viewMode === "dashboard" ? "#1e40af" : "#6b7280",
-            borderBottom: viewMode === "dashboard" ? "2px solid #3b82f6" : "2px solid transparent",
-            fontSize: "0.9rem",
-            fontWeight: viewMode === "dashboard" ? 600 : 400,
-          }}
-        >
-          Dashboard
-        </a>
-        {isOutlineReview && (
+      <nav style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", borderBottom: "1px solid #e5e7eb", paddingBottom: "0.5rem", flexWrap: "wrap" }}>
+        {([
+          { key: "dashboard", label: "Dashboard" },
+          isOutlineReview ? { key: "outlines", label: "大纲审阅" } : null,
+          isCrossLinkReview ? { key: "crosslink", label: "互链审阅" } : null,
+          isArticleReview ? { key: "articles", label: "文章审阅" } : null,
+          isBatchReview ? { key: "batch", label: "批量确认" } : null,
+        ].filter((tab): tab is { key: string; label: string } => tab !== null).map((tab) => (
           <a
-            href={`/clusters/${clusterId}?view=outlines`}
+            key={tab.key}
+            href={`/clusters/${clusterId}?view=${tab.key}`}
             style={{
               padding: "0.4rem 0.75rem",
               textDecoration: "none",
-              color: viewMode === "outlines" ? "#1e40af" : "#6b7280",
-              borderBottom: viewMode === "outlines" ? "2px solid #3b82f6" : "2px solid transparent",
+              color: viewMode === tab.key ? "#1e40af" : "#6b7280",
+              borderBottom: viewMode === tab.key ? "2px solid #3b82f6" : "2px solid transparent",
               fontSize: "0.9rem",
-              fontWeight: viewMode === "outlines" ? 600 : 400,
+              fontWeight: viewMode === tab.key ? 600 : 400,
             }}
           >
-            大纲审阅
+            {tab.label}
           </a>
-        )}
-        {isCrossLinkReview && (
-          <a
-            href={`/clusters/${clusterId}?view=crosslink`}
-            style={{
-              padding: "0.4rem 0.75rem",
-              textDecoration: "none",
-              color: viewMode === "crosslink" ? "#1e40af" : "#6b7280",
-              borderBottom: viewMode === "crosslink" ? "2px solid #3b82f6" : "2px solid transparent",
-              fontSize: "0.9rem",
-              fontWeight: viewMode === "crosslink" ? 600 : 400,
-            }}
-          >
-            互链审阅
-          </a>
-        )}
+        )))}
       </nav>
 
       {viewMode === "dashboard" && (
@@ -133,14 +122,28 @@ export default async function ClusterDetailPage({
           clusterState={state}
           outlines={outlines}
           crossLinkPlan={crossLinkPlan}
-          onApprove={() => {
-            // Server action will handle the redirect
-          }}
+          onApprove={() => {}}
         />
       )}
 
       {viewMode === "crosslink" && isCrossLinkReview && (
         <CrossLinkApprovalView clusterId={clusterId} crossLinkPlan={crossLinkPlan} />
+      )}
+
+      {viewMode === "articles" && isArticleReview && (
+        <ClusterArticleReview
+          clusterId={clusterId}
+          articles={fullArticles}
+          onApprove={() => {}}
+        />
+      )}
+
+      {viewMode === "batch" && isBatchReview && (
+        <BatchReviewView
+          clusterId={clusterId}
+          batchReview={batchReview}
+          onApprove={() => {}}
+        />
       )}
     </main>
   );

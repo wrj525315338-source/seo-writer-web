@@ -1,14 +1,84 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCluster, listClusterArticles, getProject } from "@/lib/db";
+import { getCluster, listClusterArticles } from "@/lib/db";
 import { readClusterState, approveClusterPhase, setClusterPhaseStatus } from "@/lib/clusterState";
-import { getClusterProgress, runClusterPhase0, runPhase1b, checkClusterPhaseCompletion } from "@/lib/clusterRunner";
+import { runClusterPhase0, runPhase1b, checkClusterPhaseCompletion, generateBatchReview } from "@/lib/clusterRunner";
 import { runPhase, approvePhase } from "@/lib/phaseRunner";
-import { readProjectState } from "@/lib/projectState";
-import { readOutputForPhase } from "@/lib/fileStorage";
+import { readOutputForPhase, getClusterDir } from "@/lib/fileStorage";
 import { sanitizeError } from "@/lib/validators";
-import type { ClusterPhaseId } from "@/lib/types";
+import type { ClusterPhaseId, PhaseId } from "@/lib/types";
 
 export const runtime = "nodejs";
+
+/** Mapping from cluster phase to the single-article phase it dispatches to */
+const CLUSTER_TO_ARTICLE_PHASE: Partial<Record<ClusterPhaseId, PhaseId>> = {
+  cluster_phase1: "phase1",
+  cluster_phase2: "phase2",
+  cluster_phase3: "phase3",
+  cluster_phase4: "phase4",
+  cluster_phase5: "phase5",
+};
+
+/** Cluster phases that require manual review (not auto-approved) */
+const CLUSTER_MANUAL_REVIEW_PHASES: ClusterPhaseId[] = [
+  "cluster_phase1",
+  "cluster_phase1b",
+  "cluster_phase5",
+  "cluster_batch_confirm",
+];
+
+/**
+ * Run an article-level phase for all articles in the cluster.
+ * Returns the first error encountered, or null on success.
+ */
+async function runPhaseForAllArticles(
+  clusterId: string,
+  clusterPhase: ClusterPhaseId,
+  articlePhase: PhaseId
+): Promise<string | null> {
+  const articles = listClusterArticles(clusterId);
+  setClusterPhaseStatus(clusterId, clusterPhase, "running");
+
+  for (const article of articles) {
+    try {
+      await runPhase(article.project_id, articlePhase);
+    } catch (error) {
+      const msg = `${article.article_slug} ${articlePhase} 失败: ${sanitizeError(error)}`;
+      setClusterPhaseStatus(clusterId, clusterPhase, "failed", msg);
+      return msg;
+    }
+  }
+
+  // Check completion and set appropriate status
+  if (checkClusterPhaseCompletion(clusterId, articlePhase)) {
+    if (CLUSTER_MANUAL_REVIEW_PHASES.includes(clusterPhase)) {
+      setClusterPhaseStatus(clusterId, clusterPhase, "waiting_review");
+    } else {
+      approveClusterPhase(clusterId, clusterPhase);
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Approve an article-level phase for all articles in the cluster.
+ */
+async function approvePhaseForAllArticles(
+  clusterId: string,
+  clusterPhase: ClusterPhaseId,
+  articlePhase: PhaseId
+): Promise<string | null> {
+  const articles = listClusterArticles(clusterId);
+  for (const article of articles) {
+    try {
+      await approvePhase(article.project_id, articlePhase);
+    } catch (error) {
+      return `${article.article_slug} ${articlePhase} 审批失败: ${sanitizeError(error)}`;
+    }
+  }
+  approveClusterPhase(clusterId, clusterPhase);
+  return null;
+}
 
 export async function GET(
   _request: NextRequest,
@@ -21,27 +91,21 @@ export async function GET(
   }
 
   const state = readClusterState(clusterId);
-  const progress = getClusterProgress(clusterId);
+  const progress = (await import("@/lib/clusterRunner")).getClusterProgress(clusterId);
+  const articles = listClusterArticles(clusterId);
 
   // Get outlines for each article
-  const articles = listClusterArticles(clusterId);
   const outlines = articles.map((article) => {
-    try {
-      const content = readOutputForPhase(article.project_id, "phase1");
-      return {
-        slug: article.article_slug,
-        role: article.article_role,
-        projectId: article.project_id,
-        content,
-      };
-    } catch {
-      return {
-        slug: article.article_slug,
-        role: article.article_role,
-        projectId: article.project_id,
-        content: "",
-      };
-    }
+    let content = "";
+    try { content = readOutputForPhase(article.project_id, "phase1"); } catch { /* not yet */ }
+    return { slug: article.article_slug, role: article.article_role, projectId: article.project_id, content };
+  });
+
+  // Get full articles for Phase 5 review
+  const fullArticles = articles.map((article) => {
+    let content = "";
+    try { content = readOutputForPhase(article.project_id, "phase3"); } catch { /* not yet */ }
+    return { slug: article.article_slug, role: article.article_role, projectId: article.project_id, content };
   });
 
   // Read cross-link plan
@@ -49,22 +113,11 @@ export async function GET(
   try {
     const fs = await import("node:fs");
     const path = await import("node:path");
-    const { getClusterDir } = await import("@/lib/fileStorage");
     const planPath = path.join(getClusterDir(clusterId), "00_cross_link_plan.md");
-    if (fs.existsSync(planPath)) {
-      crossLinkPlan = fs.readFileSync(planPath, "utf-8");
-    }
-  } catch {
-    // ignore
-  }
+    if (fs.existsSync(planPath)) crossLinkPlan = fs.readFileSync(planPath, "utf-8");
+  } catch { /* ignore */ }
 
-  return NextResponse.json({
-    cluster,
-    state,
-    progress,
-    outlines,
-    crossLinkPlan,
-  });
+  return NextResponse.json({ cluster, state, progress, outlines, fullArticles, crossLinkPlan });
 }
 
 export async function POST(
@@ -81,44 +134,10 @@ export async function POST(
     const body = await request.json();
     const { action, phase } = body as { action: string; phase?: ClusterPhaseId };
 
+    // ===== Cluster-specific phases =====
+
     if (action === "run" && phase === "cluster_phase0") {
       await runClusterPhase0(clusterId);
-      return NextResponse.json({ ok: true });
-    }
-
-    if (action === "run" && phase === "cluster_phase1") {
-      // Run Phase 1 for each article
-      const articles = listClusterArticles(clusterId);
-      setClusterPhaseStatus(clusterId, "cluster_phase1", "running");
-
-      for (const article of articles) {
-        try {
-          await runPhase(article.project_id, "phase1");
-        } catch (error) {
-          setClusterPhaseStatus(clusterId, "cluster_phase1", "failed", `${article.article_slug}: ${error}`);
-          return NextResponse.json({ error: `${article.article_slug} Phase 1 失败: ${sanitizeError(error)}` }, { status: 400 });
-        }
-      }
-
-      // Check if all articles completed Phase 1
-      if (checkClusterPhaseCompletion(clusterId, "phase1")) {
-        setClusterPhaseStatus(clusterId, "cluster_phase1", "waiting_review");
-      }
-
-      return NextResponse.json({ ok: true });
-    }
-
-    if (action === "approve" && phase === "cluster_phase1") {
-      // Approve Phase 1 for all articles
-      const articles = listClusterArticles(clusterId);
-      for (const article of articles) {
-        try {
-          await approvePhase(article.project_id, "phase1");
-        } catch (error) {
-          return NextResponse.json({ error: `${article.article_slug} Phase 1 审批失败: ${sanitizeError(error)}` }, { status: 400 });
-        }
-      }
-      approveClusterPhase(clusterId, "cluster_phase1");
       return NextResponse.json({ ok: true });
     }
 
@@ -132,9 +151,38 @@ export async function POST(
       return NextResponse.json({ ok: true });
     }
 
+    // ===== Batch confirm =====
+
     if (action === "run" && phase === "cluster_batch_confirm") {
-      // Generate batch review report
+      setClusterPhaseStatus(clusterId, "cluster_batch_confirm", "running");
+      try {
+        await generateBatchReview(clusterId);
+        setClusterPhaseStatus(clusterId, "cluster_batch_confirm", "waiting_review");
+      } catch (error) {
+        setClusterPhaseStatus(clusterId, "cluster_batch_confirm", "failed", String(error));
+        return NextResponse.json({ error: sanitizeError(error) }, { status: 400 });
+      }
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "approve" && phase === "cluster_batch_confirm") {
       approveClusterPhase(clusterId, "cluster_batch_confirm");
+      return NextResponse.json({ ok: true });
+    }
+
+    // ===== Generic per-article phase dispatch (Phase 1-5) =====
+
+    const articlePhase = phase ? CLUSTER_TO_ARTICLE_PHASE[phase] : undefined;
+
+    if (action === "run" && articlePhase) {
+      const error = await runPhaseForAllArticles(clusterId, phase!, articlePhase);
+      if (error) return NextResponse.json({ error }, { status: 400 });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (action === "approve" && articlePhase) {
+      const error = await approvePhaseForAllArticles(clusterId, phase!, articlePhase);
+      if (error) return NextResponse.json({ error }, { status: 400 });
       return NextResponse.json({ ok: true });
     }
 

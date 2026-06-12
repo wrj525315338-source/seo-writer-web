@@ -92,7 +92,7 @@ export async function runClusterPhase0(clusterId: string): Promise<void> {
     const summaryOutput = await runSkillPrompt(
       firstProject,
       [
-        "run_prompt.py",
+        "scripts/run_prompt.py",
         "--prompt", "prompts/phase0_cluster_brief.md",
         "--input", inputPath,
         "--output", path.join(outputsDir, "00_shared_material_summary.md"),
@@ -103,7 +103,7 @@ export async function runClusterPhase0(clusterId: string): Promise<void> {
     const checklistOutput = await runSkillPrompt(
       firstProject,
       [
-        "run_prompt.py",
+        "scripts/run_prompt.py",
         "--prompt", "prompts/phase0_generate_checklist.md",
         "--input", inputPath,
         "--output", path.join(outputsDir, "00_shared_writing_checklist.md"),
@@ -133,6 +133,12 @@ export async function runClusterPhase0(clusterId: string): Promise<void> {
       if (fs.existsSync(checklistSrc)) {
         fs.copyFileSync(checklistSrc, path.join(articleOutputsDir, "00_writing_checklist.md"));
       }
+    }
+
+    // Mark each article's Phase 0 as approved so Phase 1 can run
+    const { approvePhaseInState } = await import("@/lib/projectState");
+    for (const article of articles) {
+      approvePhaseInState(article.project_id, "phase0");
     }
 
     approveClusterPhase(clusterId, "cluster_phase0");

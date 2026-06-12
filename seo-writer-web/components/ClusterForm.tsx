@@ -1,10 +1,21 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import ModelConfigForm from "@/components/ModelConfigForm";
 import type { ParsedCluster } from "@/lib/types";
 
 type Step = "upload" | "preview" | "creating";
+
+interface ModelConfig {
+  writingProvider: string;
+  writingModelName: string;
+  writingBaseUrl: string;
+  writingTemperature: number;
+  auditorProvider: string;
+  auditorModelName: string;
+  auditorBaseUrl: string;
+  auditorTemperature: number;
+}
 
 interface ClusterFormProps {
   sharedFiles: {
@@ -15,6 +26,22 @@ interface ClusterFormProps {
   };
 }
 
+function extractModelConfig(form: HTMLFormElement): ModelConfig {
+  const fd = new FormData(form);
+  const wp = String(fd.get("writingProvider") || "openai");
+  const wm = String(fd.get("writingModelName") || "");
+  const wb = String(fd.get("writingBaseUrl") || "");
+  const wt = Number(fd.get("writingTemperature") || 0.7);
+  const ap = String(fd.get("auditorProvider") || wp);
+  const am = String(fd.get("auditorModelName") || wm);
+  const ab = String(fd.get("auditorBaseUrl") || wb);
+  const at = Number(fd.get("auditorTemperature") || 0.2);
+  return {
+    writingProvider: wp, writingModelName: wm, writingBaseUrl: wb, writingTemperature: wt,
+    auditorProvider: ap, auditorModelName: am, auditorBaseUrl: ab, auditorTemperature: at,
+  };
+}
+
 export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
   const [step, setStep] = useState<Step>("upload");
   const [parsed, setParsed] = useState<ParsedCluster | null>(null);
@@ -22,6 +49,8 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
   const [loading, setLoading] = useState(false);
   const [originalFileName, setOriginalFileName] = useState("");
   const [briefContent, setBriefContent] = useState("");
+  const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   async function handleParse(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -41,6 +70,9 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
     const content = await briefFile.text();
     setBriefContent(content);
     setOriginalFileName(briefFile.name);
+
+    // Save model config before the form gets unmounted
+    setModelConfig(extractModelConfig(e.currentTarget));
 
     try {
       const response = await fetch("/api/clusters/parse", {
@@ -65,16 +97,12 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
   }
 
   async function handleCreate() {
-    if (!parsed) return;
+    if (!parsed || !modelConfig) return;
     setError("");
     setLoading(true);
     setStep("creating");
 
     try {
-      // Get model config from the form
-      const form = document.querySelector("form") as HTMLFormElement;
-      const formData = new FormData(form);
-
       const response = await fetch("/api/clusters", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -87,14 +115,7 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
           crossLinkRules: parsed.crossLinkRules,
           specialRequirements: parsed.specialRequirements,
           briefContent,
-          writingProvider: formData.get("writingProvider") || "openai",
-          writingModelName: formData.get("writingModelName") || "",
-          writingBaseUrl: formData.get("writingBaseUrl") || "",
-          writingTemperature: Number(formData.get("writingTemperature") || 0.7),
-          auditorProvider: formData.get("auditorProvider") || formData.get("writingProvider") || "openai",
-          auditorModelName: formData.get("auditorModelName") || formData.get("writingModelName") || "",
-          auditorBaseUrl: formData.get("auditorBaseUrl") || formData.get("writingBaseUrl") || "",
-          auditorTemperature: Number(formData.get("auditorTemperature") || 0.2),
+          ...modelConfig,
         }),
       });
 
@@ -107,7 +128,7 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
       }
 
       // Redirect to cluster detail page
-      window.location.href = `/clusters/${data.clusterId}`;
+      window.location.href = `/projects`; // TODO: redirect to cluster detail page once implemented
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
       setStep("preview");
@@ -118,7 +139,7 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
   return (
     <div>
       {step === "upload" && (
-        <form onSubmit={handleParse}>
+        <form ref={formRef} onSubmit={handleParse}>
           <div className="form-section">
             <h2>集群 Brief</h2>
             <p className="help">

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 import {
   ArticleRole,
   ArticleType,
@@ -74,12 +75,18 @@ function extractCrossLinkTable(text: string): RawCrossLinkRow[] {
       .map((c) => c.trim())
       .filter(Boolean);
     if (cells.length >= 3) {
-      rows.push({
-        from: cells[0],
-        to: cells[1],
-        where: cells[2],
-        anchorExample: cells[3] || "",
-      });
+      // Format: | From → To | Where | Anchor |
+      // cells[0] = "Pillar → A", cells[1] = placement, cells[2] = anchor text
+      const fromTo = cells[0];
+      const arrowMatch = fromTo.match(/^(.+?)\s*→\s*(.+)$/);
+      if (arrowMatch) {
+        rows.push({
+          from: arrowMatch[1].trim(),
+          to: arrowMatch[2].trim(),
+          where: cells[1],
+          anchorExample: cells[2] || "",
+        });
+      }
     }
   }
   return rows;
@@ -241,11 +248,39 @@ Output ONLY valid JSON, no markdown fences.`;
 
 // ============ Main parser entry point ============
 
+/** Extract text from binary formats (docx, xlsx) using extract_materials.py */
+function extractTextFromBinary(filePath: string): string | null {
+  const ext = path.extname(filePath).toLowerCase();
+  if (![".docx", ".doc", ".xlsx", ".xlsm"].includes(ext)) return null;
+
+  const scriptDir = path.join(process.cwd(), "..", "skills", "seo-article-writer", "scripts");
+  const scriptPath = path.join(scriptDir, "extract_materials.py");
+  if (!fs.existsSync(scriptPath)) return null;
+
+  try {
+    const tempOut = filePath + ".extracted.md";
+    execSync(
+      `python "${scriptPath}" "${filePath}" -o "${tempOut}"`,
+      { timeout: 30000, stdio: "pipe" }
+    );
+    if (fs.existsSync(tempOut)) {
+      const text = fs.readFileSync(tempOut, "utf-8");
+      fs.unlinkSync(tempOut);
+      return text;
+    }
+  } catch {
+    // extraction failed, fall through
+  }
+  return null;
+}
+
 export async function parseClusterBrief(
   briefFilePath: string,
   runLlm?: (prompt: string) => Promise<string>
 ): Promise<ParsedCluster> {
-  const briefText = fs.readFileSync(briefFilePath, "utf-8");
+  // For binary formats, extract text first
+  const extractedText = extractTextFromBinary(briefFilePath);
+  const briefText = extractedText || fs.readFileSync(briefFilePath, "utf-8");
 
   // Layer 1: Local extraction
   const rawArticles = extractArticleTable(briefText);

@@ -61,8 +61,23 @@ const promptFiles: Record<PhaseId, string> = {
 };
 
 const phase4ChunkMaxChars = 2500;
-const finalArticleMinWords = 1200;
-const finalArticleMaxWords = 1600;
+const DEFAULT_MIN_WORDS = 1200;
+const DEFAULT_MAX_WORDS = 1600;
+
+/** Extract word count range from project extraNotes (set by cluster creation) */
+function getWordCountRange(projectId: string): { min: number; max: number } {
+  try {
+    const state = readProjectState(projectId);
+    const extraNotes = state.inputs.articleBrief.extraNotes || "";
+    const match = extraNotes.match(/Target Words:\s*(\d+)-(\d+)/);
+    if (match) {
+      return { min: parseInt(match[1], 10), max: parseInt(match[2], 10) };
+    }
+  } catch {
+    // ignore
+  }
+  return { min: DEFAULT_MIN_WORDS, max: DEFAULT_MAX_WORDS };
+}
 
 export function getProjectState(projectId: string) {
   return readProjectState(projectId);
@@ -97,6 +112,7 @@ function languageContentRequirementsPath(): string {
 function buildBriefMarkdown(project: Project): string {
   const state = readProjectState(project.id);
   const brief = state.inputs.articleBrief;
+  const wordRange = getWordCountRange(project.id);
   return [
     "# Article Brief",
     "",
@@ -111,7 +127,7 @@ function buildBriefMarkdown(project: Project): string {
     `- Search intent: ${project.search_intent || "To be inferred by SEO Article Writer Skill during Phase 0 / Phase 1."}`,
     `- Language: ${project.language}`,
     `- Brand name: ${project.brand_name}`,
-    `- Target word count: 1200-1600 visible article words, counting headings, body, tables, and FAQ, excluding SEO metadata, prompts, checklist reports, and image planning files.`,
+    `- Target word count: ${wordRange.min}-${wordRange.max} visible article words, counting headings, body, tables, and FAQ, excluding SEO metadata, prompts, checklist reports, and image planning files.`,
     `- Deferred image requirements for Phase 5.5 only: ${brief.imageRequirements}`,
     `- Extra notes: ${brief.extraNotes || "None"}`
   ].join("\n");
@@ -1394,7 +1410,9 @@ function runGlobalChecks(articlePath: string, checklistPath: string): string[] {
   return issues;
 }
 
-function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, articleWordCount: number, articlePath: string, checklistPath: string): void {
+function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, articleWordCount: number, articlePath: string, checklistPath: string, wordRange?: { min: number; max: number }): void {
+  const minWords = wordRange?.min ?? DEFAULT_MIN_WORDS;
+  const maxWords = wordRange?.max ?? DEFAULT_MAX_WORDS;
   const chunkReports = chunkReportPaths.map((reportPath, index) => ({
     index: index + 1,
     path: reportPath,
@@ -1411,10 +1429,10 @@ function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, art
   const hasIssues = hasChunkIssues || globalIssues.length > 0;
   const hasQuestions = issueGroups.some((report) => report.questions.length > 0);
   const lengthIssue =
-    articleWordCount < finalArticleMinWords
-      ? `- C05-Length | 全文 | 当前可见正文约 ${articleWordCount} words，低于 ${finalArticleMinWords}-${finalArticleMaxWords} words 目标范围 | 补充必要的具体信息，但不要增加空泛段落 | severity: medium`
-      : articleWordCount > finalArticleMaxWords
-        ? `- C05-Length | 全文 | 当前可见正文约 ${articleWordCount} words，超过 ${finalArticleMinWords}-${finalArticleMaxWords} words 目标范围 | 压缩重复示例、泛泛建议、长转场和过度产品说明 | severity: high`
+    articleWordCount < minWords
+      ? `- C05-Length | 全文 | 当前可见正文约 ${articleWordCount} words，低于 ${minWords}-${maxWords} words 目标范围 | 补充必要的具体信息，但不要增加空泛段落 | severity: medium`
+      : articleWordCount > maxWords
+        ? `- C05-Length | 全文 | 当前可见正文约 ${articleWordCount} words，超过 ${minWords}-${maxWords} words 目标范围 | 压缩重复示例、泛泛建议、长转场和过度产品说明 | severity: high`
         : "";
   const checklistPassed = !hasIssues && !hasQuestions && !lengthIssue;
 
@@ -1427,8 +1445,8 @@ function mergePhase4ChunkReports(chunkReportPaths: string[], output: string, art
     "",
     `- 已使用 Phase 0 固定 checklist 对全文进行 ${chunkReports.length} 个分块审查。`,
     lengthIssue
-      ? `- 字数检查未通过：全文可见正文约 ${articleWordCount} words；目标范围为 ${finalArticleMinWords}-${finalArticleMaxWords} words。详见 Issues Found。`
-      : `- 字数检查通过：全文可见正文约 ${articleWordCount} words；目标范围为 ${finalArticleMinWords}-${finalArticleMaxWords} words。`,
+      ? `- 字数检查未通过：全文可见正文约 ${articleWordCount} words；目标范围为 ${minWords}-${maxWords} words。详见 Issues Found。`
+      : `- 字数检查通过：全文可见正文约 ${articleWordCount} words；目标范围为 ${minWords}-${maxWords} words。`,
     "- Phase 4 合并步骤由后端本地完成，未重新生成或修改 checklist 标准。",
     "- 详细逐段审查记录见 `outputs/phase4_audit_chunks/`。"
   ];
@@ -1536,7 +1554,8 @@ export async function runPhase4Chunked(projectId: string): Promise<void> {
       chunkReportPaths.push(chunkReport);
     }
 
-    mergePhase4ChunkReports(chunkReportPaths, output, articleWordCount, full, writingChecklist);
+    const wordRange = getWordCountRange(projectId);
+    mergePhase4ChunkReports(chunkReportPaths, output, articleWordCount, full, writingChecklist, wordRange);
     ensureOutputExists(output);
     setPhaseStatus(projectId, "phase4", "waiting_review");
     updatePhaseRun(runId, "waiting_review", path.relative(getProjectDir(projectId), output).replace(/\\/g, "/"));

@@ -3,13 +3,23 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseClusterBrief } from "@/lib/clusterParser";
 import { safeFileName } from "@/lib/fileStorage";
+import { replaceSharedUploads, getSharedWritingGuidelineFiles, getSharedExampleArticleFiles } from "@/lib/sharedFiles";
 import { sanitizeError } from "@/lib/validators";
 
 export const runtime = "nodejs";
 
+function isUploadedFile(value: FormDataEntryValue | null): value is File {
+  return Boolean(value && typeof value !== "string" && value.size > 0);
+}
+
+function uploadedFiles(values: FormDataEntryValue[]): File[] {
+  return values.filter((value): value is File => typeof value !== "string" && value.size > 0);
+}
+
 /**
  * POST /api/clusters/parse
  * Accepts a brief file (md/xlsx/docx/txt) and optionally writing guidelines + examples.
+ * Saves guideline/example uploads to shared storage for later reuse.
  * Returns parsed cluster structure for preview before creation.
  */
 export async function POST(request: NextRequest) {
@@ -19,6 +29,27 @@ export async function POST(request: NextRequest) {
 
     if (!briefFile || typeof briefFile === "string" || briefFile.size === 0) {
       return NextResponse.json({ error: "请上传 brief 文件。" }, { status: 400 });
+    }
+
+    // Save uploaded writing guidelines to shared storage
+    const uploadedGuideline = formData.get("writingGuidelineFile");
+    if (isUploadedFile(uploadedGuideline)) {
+      await replaceSharedUploads("writing-guidelines", [uploadedGuideline], "guideline_");
+    }
+
+    // Save uploaded example articles to shared storage
+    const uploadedExamples = uploadedFiles(formData.getAll("exampleArticleFiles"));
+    if (uploadedExamples.length > 0) {
+      await replaceSharedUploads("examples", uploadedExamples, "example_");
+    }
+
+    // Check that writing guidelines exist (either just uploaded or previously shared)
+    const guidelines = getSharedWritingGuidelineFiles();
+    if (guidelines.length === 0) {
+      return NextResponse.json(
+        { error: "请上传写作规范。上传一次后，后续项目会自动复用。" },
+        { status: 400 }
+      );
     }
 
     // Save the brief file to a temp location for parsing
@@ -34,13 +65,18 @@ export async function POST(request: NextRequest) {
 
       return NextResponse.json({
         parsed,
-        tempFilePath: tempFileName, // Return filename for later use during creation
         originalFileName: briefFile.name,
       });
     } finally {
-      // Clean up temp file
-      // Note: We keep it for now so the creation step can reuse it.
-      // It will be cleaned up during cluster creation or by a periodic cleanup job.
+      // Clean up temp file after parsing
+      try {
+        if (fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+        // Also clean up any extracted text file
+        const extractedPath = tempFilePath + ".extracted.md";
+        if (fs.existsSync(extractedPath)) fs.unlinkSync(extractedPath);
+      } catch {
+        // cleanup failure is non-fatal
+      }
     }
   } catch (error) {
     return NextResponse.json({ error: sanitizeError(error) }, { status: 400 });

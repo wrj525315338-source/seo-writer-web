@@ -7,6 +7,7 @@ import { getClusterProgress } from "@/lib/clusterRunner";
 import { readOutputForPhase, getClusterDir } from "@/lib/fileStorage";
 import ClusterDashboard from "@/components/ClusterDashboard";
 import OutlineReviewPanel from "@/components/OutlineReviewPanel";
+import CrossLinkApprovalView from "@/components/CrossLinkApprovalView";
 
 export const dynamic = "force-dynamic";
 
@@ -139,29 +140,7 @@ export default async function ClusterDetailPage({
       )}
 
       {viewMode === "crosslink" && isCrossLinkReview && (
-        <div style={{ margin: "1rem 0" }}>
-          <h3>互链规划审阅</h3>
-          <pre style={{
-            background: "#f9fafb",
-            border: "1px solid #e5e7eb",
-            borderRadius: "6px",
-            padding: "1rem",
-            whiteSpace: "pre-wrap",
-            fontSize: "0.85rem",
-            maxHeight: "600px",
-            overflowY: "auto",
-            marginBottom: "1rem",
-          }}>
-            {crossLinkPlan || "互链规划尚未生成"}
-          </pre>
-          <form action={`/api/clusters/${clusterId}/phase`} method="POST">
-            <input type="hidden" name="action" value="approve" />
-            <input type="hidden" name="phase" value="cluster_phase1b" />
-            <button type="submit" className="btn primary">
-              批准互链规划 →
-            </button>
-          </form>
-        </div>
+        <CrossLinkApprovalView clusterId={clusterId} crossLinkPlan={crossLinkPlan} />
       )}
     </main>
   );

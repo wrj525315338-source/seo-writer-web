@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import {
   ArticleRole,
   ArticleType,
@@ -259,10 +259,8 @@ function extractTextFromBinary(filePath: string): string | null {
 
   try {
     const tempOut = filePath + ".extracted.md";
-    execSync(
-      `python "${scriptPath}" "${filePath}" -o "${tempOut}"`,
-      { timeout: 30000, stdio: "pipe" }
-    );
+    // Use execFileSync to avoid shell injection from filenames
+    execFileSync("python", [scriptPath, filePath, "-o", tempOut], { timeout: 30000, stdio: "pipe" });
     if (fs.existsSync(tempOut)) {
       const text = fs.readFileSync(tempOut, "utf-8");
       fs.unlinkSync(tempOut);
@@ -281,8 +279,9 @@ export async function parseClusterBrief(
   // For binary formats, extract text first
   const extractedText = extractTextFromBinary(briefFilePath);
   const briefText = extractedText || fs.readFileSync(briefFilePath, "utf-8");
+  const isBinarySource = extractedText !== null;
 
-  // Layer 1: Local extraction
+  // Layer 1: Local extraction (works well for markdown, less so for binary)
   const rawArticles = extractArticleTable(briefText);
   const rawCrossLinks = extractCrossLinkTable(briefText);
   const brandReqs = extractBrandRequirements(briefText);
@@ -327,6 +326,10 @@ export async function parseClusterBrief(
 
   // If no LLM function provided, return local results only
   if (!runLlm) {
+    // For binary formats where local extraction found nothing, we need LLM
+    if (isBinarySource && localArticles.length === 0) {
+      throw new Error("二进制格式（.docx/.xlsx）的 brief 需要 LLM 解析才能提取文章列表。请改用 .md 或 .txt 格式，或确保 LLM 服务可用。");
+    }
     return {
       clusterName: extractClusterName(briefText),
       brandName: extractBrandName(briefText),

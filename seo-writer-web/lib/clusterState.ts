@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import { getClusterStatePath, ensureClusterDirs } from "@/lib/fileStorage";
+import { updateClusterPhase } from "@/lib/db";
 import { ClusterPhaseId, ClusterState, PhaseState } from "@/lib/types";
 
 const CLUSTER_PHASES: ClusterPhaseId[] = [
@@ -85,10 +86,16 @@ export function approveClusterPhase(clusterId: string, phase: ClusterPhaseId): C
   state.phases[phase].errorMessage = undefined;
   // Advance to next cluster phase
   const idx = CLUSTER_PHASES.indexOf(phase);
+  let nextPhase: ClusterPhaseId = phase;
   if (idx >= 0 && idx < CLUSTER_PHASES.length - 1) {
-    state.currentPhase = CLUSTER_PHASES[idx + 1];
+    nextPhase = CLUSTER_PHASES[idx + 1];
+    state.currentPhase = nextPhase;
   }
   writeClusterState(state);
+  // Also update the DB so GET /api/clusters returns correct phase
+  try {
+    updateClusterPhase(clusterId, nextPhase);
+  } catch { /* non-fatal: JSON state is authoritative */ }
   return state;
 }
 

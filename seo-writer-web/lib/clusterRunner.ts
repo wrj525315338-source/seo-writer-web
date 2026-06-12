@@ -1,11 +1,30 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 import { getCluster, listClusterArticles, getProject } from "@/lib/db";
 import { readClusterState, setClusterPhaseStatus, approveClusterPhase } from "@/lib/clusterState";
-import { getClusterDir, getClusterStorageRoot } from "@/lib/fileStorage";
+import { getClusterDir, getProjectDir, getOutputsDir, getInputsDir, writeArticleBrief } from "@/lib/fileStorage";
 import { readProjectState, writeProjectState } from "@/lib/projectState";
 import { runSkillPrompt } from "@/lib/codexClient";
-import { ClusterPhaseId, ClusterState } from "@/lib/types";
+import { ClusterPhaseId } from "@/lib/types";
+
+/** Extract text from binary formats using extract_materials.py */
+function extractTextFromBinaryFile(filePath: string): string | null {
+  const ext = path.extname(filePath).toLowerCase();
+  if (![".docx", ".doc", ".xlsx", ".xlsm", ".pdf"].includes(ext)) return null;
+  const scriptPath = path.join(process.cwd(), "..", "skills", "seo-article-writer", "scripts", "extract_materials.py");
+  if (!fs.existsSync(scriptPath)) return null;
+  try {
+    const tempOut = filePath + ".extracted.md";
+    execFileSync("python", [scriptPath, filePath, "-o", tempOut], { timeout: 30000, stdio: "pipe" });
+    if (fs.existsSync(tempOut)) {
+      const text = fs.readFileSync(tempOut, "utf-8");
+      fs.unlinkSync(tempOut);
+      return text;
+    }
+  } catch { /* extraction failed */ }
+  return null;
+}
 
 /**
  * Run Cluster Phase 0: Shared material reading + checklist generation.
@@ -30,26 +49,28 @@ export async function runClusterPhase0(clusterId: string): Promise<void> {
   let exampleContent = "";
 
   if (articles.length > 0) {
-    const firstProject = getProject(articles[0].project_id);
+    const firstProjectId = articles[0].project_id;
+    const firstProject = getProject(firstProjectId);
     if (firstProject) {
-      const firstProjectState = readProjectState(articles[0].project_id);
-      const projectDir = path.join(getClusterStorageRoot(), "..", "projects", articles[0].project_id);
+      const firstProjectState = readProjectState(firstProjectId);
+      const projectDir = getProjectDir(firstProjectId);
 
-      // Read writing guideline
+      // Read writing guideline (extract binary formats first)
       if (firstProjectState.inputs.writingGuidelineFile) {
         const guidelinePath = path.join(projectDir, firstProjectState.inputs.writingGuidelineFile);
         if (fs.existsSync(guidelinePath)) {
-          guidelineContent = fs.readFileSync(guidelinePath, "utf-8");
+          guidelineContent = extractTextFromBinaryFile(guidelinePath) || fs.readFileSync(guidelinePath, "utf-8");
         }
       }
 
-      // Read example articles
+      // Read example articles (extract binary formats first)
       if (firstProjectState.inputs.exampleArticleFiles?.length > 0) {
         const exampleParts: string[] = [];
         for (const exampleFile of firstProjectState.inputs.exampleArticleFiles) {
           const examplePath = path.join(projectDir, exampleFile);
           if (fs.existsSync(examplePath)) {
-            exampleParts.push(fs.readFileSync(examplePath, "utf-8"));
+            const text = extractTextFromBinaryFile(examplePath) || fs.readFileSync(examplePath, "utf-8");
+            exampleParts.push(text);
           }
         }
         exampleContent = exampleParts.join("\n\n---\n\n");
@@ -117,9 +138,9 @@ export async function runClusterPhase0(clusterId: string): Promise<void> {
     const { writeClusterState } = await import("@/lib/clusterState");
     writeClusterState(updatedState);
 
-    // Copy shared outputs to each article project
+    // Copy shared outputs to each article project and write article_brief.md
     for (const article of articles) {
-      const articleOutputsDir = path.join(getClusterStorageRoot(), "..", "projects", article.project_id, "outputs");
+      const articleOutputsDir = getOutputsDir(article.project_id);
       fs.mkdirSync(articleOutputsDir, { recursive: true });
 
       // Copy summary
@@ -133,6 +154,24 @@ export async function runClusterPhase0(clusterId: string): Promise<void> {
       if (fs.existsSync(checklistSrc)) {
         fs.copyFileSync(checklistSrc, path.join(articleOutputsDir, "00_writing_checklist.md"));
       }
+
+      // Write article_brief.md for this article (required by Phase 1)
+      const articleBrief = [
+        "# Article Brief",
+        "",
+        `- Cluster: ${clusterId}`,
+        `- Article Role: ${article.article_role}`,
+        `- Article Type: ${article.article_type}`,
+        `- Slug: ${article.article_slug}`,
+        `- Target Words: ${article.target_word_min}-${article.target_word_max}`,
+        `- Primary Keyword: ${getProject(article.project_id)?.primary_keyword || ""}`,
+        `- Secondary Keywords: ${getProject(article.project_id)?.secondary_keywords || ""}`,
+      ].join("\n");
+      writeArticleBrief(article.project_id, articleBrief);
+
+      // Copy brief to inputs for the article
+      const articleInputsDir = getInputsDir(article.project_id);
+      fs.mkdirSync(articleInputsDir, { recursive: true });
     }
 
     // Mark each article's Phase 0 as approved so Phase 1 can run
@@ -168,8 +207,7 @@ export async function runPhase1b(clusterId: string): Promise<void> {
     // Read each article's approved outline
     const outlineParts: string[] = [];
     for (const article of articles) {
-      const projectDir = path.join(getClusterStorageRoot(), "..", "projects", article.project_id);
-      const outlinePath = path.join(projectDir, "outputs", "01_outline.md");
+      const outlinePath = path.join(getOutputsDir(article.project_id), "01_outline.md");
       if (fs.existsSync(outlinePath)) {
         outlineParts.push(`## Article: ${article.article_slug} (${article.article_role})\n\n${fs.readFileSync(outlinePath, "utf-8")}`);
       }

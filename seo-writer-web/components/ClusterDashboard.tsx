@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { encodeProjectId } from "@/lib/routeParams";
 import type { ClusterPhaseId, ClusterState } from "@/lib/types";
 
@@ -47,6 +49,33 @@ const statusColors: Record<string, string> = {
 
 export default function ClusterDashboard({ clusterId, clusterState, articleProgress }: ClusterDashboardProps) {
   const currentPhase = clusterState.currentPhase;
+  const currentPhaseState = clusterState.phases[currentPhase];
+  const router = useRouter();
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleRunPhase() {
+    setRunning(true);
+    setError("");
+    try {
+      const response = await fetch(`/api/clusters/${clusterId}/phase`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "run", phase: currentPhase }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        setError(data.error || "运行失败");
+      }
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "网络错误");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  const canRun = currentPhaseState?.status === "not_started" || currentPhaseState?.status === "failed";
 
   return (
     <div className="cluster-dashboard">
@@ -69,6 +98,18 @@ export default function ClusterDashboard({ clusterId, clusterState, articleProgr
           <span className="meta-label">互链规则</span>
           <span className="meta-value">{clusterState.crossLinkRules.length} 条</span>
         </div>
+      </div>
+
+      <div style={{ marginBottom: "1rem" }}>
+        {canRun && (
+          <button className="btn primary" onClick={handleRunPhase} disabled={running}>
+            {running ? "运行中..." : `运行 ${clusterPhaseLabels[currentPhase]}`}
+          </button>
+        )}
+        {currentPhaseState?.status === "running" && (
+          <span style={{ color: "#3b82f6", marginLeft: "0.5rem" }}>⏳ 阶段运行中...</span>
+        )}
+        {error && <p style={{ color: "#ef4444", marginTop: "0.5rem" }}>{error}</p>}
       </div>
 
       <h3>集群阶段进度</h3>

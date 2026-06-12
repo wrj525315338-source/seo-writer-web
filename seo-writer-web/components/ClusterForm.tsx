@@ -66,9 +66,13 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
       return;
     }
 
-    // Read file content for later use
-    const content = await briefFile.text();
-    setBriefContent(content);
+    // Read file content for later use (only for text formats)
+    const ext = briefFile.name.split(".").pop()?.toLowerCase() || "";
+    const isBinary = ["docx", "doc", "xlsx", "xlsm"].includes(ext);
+    if (!isBinary) {
+      const content = await briefFile.text();
+      setBriefContent(content);
+    }
     setOriginalFileName(briefFile.name);
 
     // Save model config before the form gets unmounted
@@ -88,6 +92,10 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
       }
 
       setParsed(data.parsed);
+      // Use server-extracted brief content (handles binary formats correctly)
+      if (data.briefContent) {
+        setBriefContent(data.briefContent);
+      }
       setStep("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
@@ -128,7 +136,7 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
       }
 
       // Redirect to cluster detail page
-      window.location.href = `/projects`; // TODO: redirect to cluster detail page once implemented
+      window.location.href = `/clusters/${data.clusterId}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
       setStep("preview");

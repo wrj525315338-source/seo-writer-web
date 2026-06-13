@@ -9,6 +9,12 @@ import type { ClusterPhaseId, PhaseId } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+/** All valid cluster phase IDs */
+const CLUSTER_PHASES: ClusterPhaseId[] = [
+  "cluster_phase0", "cluster_phase1", "cluster_phase1b", "cluster_phase2",
+  "cluster_phase3", "cluster_phase4", "cluster_phase5", "cluster_batch_confirm",
+];
+
 /** Mapping from cluster phase to the single-article phase it dispatches to */
 const CLUSTER_TO_ARTICLE_PHASE: Partial<Record<ClusterPhaseId, PhaseId>> = {
   cluster_phase1: "phase1",
@@ -182,9 +188,25 @@ export async function POST(
     const body = await request.json();
     const { action, phase } = body as { action: string; phase?: ClusterPhaseId };
 
+    // ===== Validate phase state before transitions =====
+    const clusterState = readClusterState(clusterId);
+
+    if (!phase || !CLUSTER_PHASES.includes(phase as ClusterPhaseId)) {
+      return NextResponse.json({ error: `无效的阶段: ${phase}` }, { status: 400 });
+    }
+
+    const phaseState = clusterState.phases[phase as ClusterPhaseId];
+
     // ===== Approve actions (fast, synchronous) =====
 
     if (action === "approve") {
+      // Can only approve phases in waiting_review status
+      if (phaseState.status !== "waiting_review") {
+        return NextResponse.json({
+          error: `阶段 ${phase} 当前状态为 ${phaseState.status}，无法审批（需要 waiting_review）`
+        }, { status: 400 });
+      }
+
       if (phase === "cluster_phase1b") {
         approveClusterPhase(clusterId, "cluster_phase1b");
         return NextResponse.json({ ok: true });
@@ -193,9 +215,9 @@ export async function POST(
         approveClusterPhase(clusterId, "cluster_batch_confirm");
         return NextResponse.json({ ok: true });
       }
-      const articlePhase = phase ? CLUSTER_TO_ARTICLE_PHASE[phase] : undefined;
+      const articlePhase = CLUSTER_TO_ARTICLE_PHASE[phase as ClusterPhaseId];
       if (articlePhase) {
-        const error = await approvePhaseForAllArticles(clusterId, phase!, articlePhase);
+        const error = await approvePhaseForAllArticles(clusterId, phase as ClusterPhaseId, articlePhase);
         if (error) return NextResponse.json({ error }, { status: 400 });
         return NextResponse.json({ ok: true });
       }
@@ -206,6 +228,13 @@ export async function POST(
     // Frontend polls via ClusterDashboard.
 
     if (action === "run") {
+      // Can only run phases in not_started or failed status
+      if (phaseState.status !== "not_started" && phaseState.status !== "failed") {
+        return NextResponse.json({
+          error: `阶段 ${phase} 当前状态为 ${phaseState.status}，无法运行（需要 not_started 或 failed）`
+        }, { status: 400 });
+      }
+
       // Fire-and-forget: schedule work after response is sent
       const runAsync = async () => {
         try {

@@ -76,6 +76,12 @@ export function setClusterPhaseStatus(
     state.currentPhase = phase;
   }
   writeClusterState(state);
+  // Sync to DB for non-running statuses
+  if (status === "failed") {
+    try {
+      updateClusterPhase(clusterId, phase, "failed");
+    } catch { /* non-fatal */ }
+  }
   return state;
 }
 

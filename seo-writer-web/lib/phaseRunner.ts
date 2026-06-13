@@ -1590,11 +1590,15 @@ async function runPromptPhase(project: Project, phase: PhaseId): Promise<string>
   const extracted = outputPath(project.id, "extracted_materials.md");
   const outlineTemplate = skillPath("templates", "outline_template.md");
 
+  // Cross-link plan (exists for cluster articles, copied during Phase 1b)
+  const crossLinkPlan = path.join(getInputsDir(project.id), "cross_link_plan.md");
+  const crossLinkInput = fs.existsSync(crossLinkPlan) ? [crossLinkPlan] : [];
+
   const inputMap: Record<PhaseId, string[]> = {
     phase0: [],
     phase1: [summary, brief, extracted, outlineTemplate],
-    phase2: [summary, outline, writingChecklist, languageContentRequirementsPath()],
-    phase3: [summary, outline, firstTwo, brief, languageContentRequirementsPath()],
+    phase2: [summary, outline, writingChecklist, ...crossLinkInput, languageContentRequirementsPath()],
+    phase3: [summary, outline, firstTwo, brief, ...crossLinkInput, languageContentRequirementsPath()],
     phase4: [writingChecklist, full],
     phase5: [summary, full, checklist]
   };
@@ -1620,8 +1624,8 @@ async function runPromptPhase(project: Project, phase: PhaseId): Promise<string>
 
   // Phase 3: validate word count after generation
   if (phase === "phase3") {
-    const articleContent = fs.readFileSync(output, "utf-8");
-    const wordCount = countVisibleArticleWords(articleContent);
+    let articleContent = fs.readFileSync(output, "utf-8");
+    let wordCount = countVisibleArticleWords(articleContent);
     const wordRange = getWordCountRange(project.id);
     if (wordCount < wordRange.min) {
       // Attempt word count repair (up to 2 retries)
@@ -1645,9 +1649,9 @@ async function runPromptPhase(project: Project, phase: PhaseId): Promise<string>
             "--input", repairInput,
             "--output", output,
           ], "writing");
-          const repaired = fs.readFileSync(output, "utf-8");
-          const repairedCount = countVisibleArticleWords(repaired);
-          if (repairedCount >= wordRange.min) break;
+          articleContent = fs.readFileSync(output, "utf-8");
+          wordCount = countVisibleArticleWords(articleContent);
+          if (wordCount >= wordRange.min) break;
         } catch {
           // repair failed, keep original
         }

@@ -52,7 +52,7 @@ Requirements:
 - Prefer short sentences, simple words, direct answers, concrete actions, and high information density.
 - Keep product placement scenario-first and avoid feature dumping.
 - Keep SEO/AIO readability, but never keyword-stuff.
-- Respect the approved section word budget. The first two H2 sections should stay proportionate, normally about 350-550 words total unless the approved outline explicitly allocates a different budget.
+- Respect the approved section word budget. The first two H2 sections should stay proportionate (normally about 15-20% of the target word count) unless the approved outline explicitly allocates a different budget.
 - Do not complete the article.
 
 Output:

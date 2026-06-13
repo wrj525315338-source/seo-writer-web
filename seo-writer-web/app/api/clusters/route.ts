@@ -39,6 +39,9 @@ export async function GET() {
  * Expects JSON body with the parsed cluster data, model config, and optional file references.
  */
 export async function POST(request: NextRequest) {
+  let clusterId = "";
+  const createdProjectIds: string[] = [];
+
   try {
     const body = await request.json();
 
@@ -56,6 +59,55 @@ export async function POST(request: NextRequest) {
       antiAiRules: [],
     };
 
+    // Validate articles array
+    if (!Array.isArray(articles) || articles.length === 0) {
+      return NextResponse.json({ error: "集群中至少需要一篇文章（articles 必须是非空数组）。" }, { status: 400 });
+    }
+
+    const VALID_ROLES = ["pillar", "support_a", "support_b", "support_c"];
+    const VALID_TYPES = ["guide", "app_list", "how_to"];
+    const seenSlugs = new Set<string>();
+
+    for (let i = 0; i < articles.length; i++) {
+      const a = articles[i];
+      if (!a.slug || typeof a.slug !== "string") {
+        return NextResponse.json({ error: `文章 ${i + 1}: slug 不能为空` }, { status: 400 });
+      }
+      if (!a.title || typeof a.title !== "string") {
+        return NextResponse.json({ error: `文章 ${i + 1}: title 不能为空` }, { status: 400 });
+      }
+      if (!VALID_ROLES.includes(a.role)) {
+        return NextResponse.json({ error: `文章 ${i + 1}: role "${a.role}" 无效，必须是 ${VALID_ROLES.join(", ")}` }, { status: 400 });
+      }
+      if (!VALID_TYPES.includes(a.articleType)) {
+        return NextResponse.json({ error: `文章 ${i + 1}: articleType "${a.articleType}" 无效，必须是 ${VALID_TYPES.join(", ")}` }, { status: 400 });
+      }
+      if (!a.primaryKeyword || typeof a.primaryKeyword !== "string") {
+        return NextResponse.json({ error: `文章 ${i + 1}: primaryKeyword 不能为空` }, { status: 400 });
+      }
+      if (!a.targetWordCount || typeof a.targetWordCount.min !== "number" || typeof a.targetWordCount.max !== "number") {
+        return NextResponse.json({ error: `文章 ${i + 1}: targetWordCount 必须是 {min, max} 格式` }, { status: 400 });
+      }
+      if (a.targetWordCount.min >= a.targetWordCount.max) {
+        return NextResponse.json({ error: `文章 ${i + 1}: targetWordCount.min 必须小于 max` }, { status: 400 });
+      }
+      if (seenSlugs.has(a.slug)) {
+        return NextResponse.json({ error: `文章 ${i + 1}: slug "${a.slug}" 重复` }, { status: 400 });
+      }
+      seenSlugs.add(a.slug);
+    }
+
+    // Validate cross-link rules
+    if (!Array.isArray(crossLinkRules)) {
+      return NextResponse.json({ error: "crossLinkRules 必须是数组" }, { status: 400 });
+    }
+    for (let i = 0; i < crossLinkRules.length; i++) {
+      const r = crossLinkRules[i];
+      if (!r.sourceSlug || !r.targetSlug) {
+        return NextResponse.json({ error: `互链规则 ${i + 1}: sourceSlug 和 targetSlug 不能为空` }, { status: 400 });
+      }
+    }
+
     // Model config (shared across all articles in the cluster)
     const writingProvider = body.writingProvider || "openai";
     const writingModelName = body.writingModelName || "";
@@ -66,9 +118,6 @@ export async function POST(request: NextRequest) {
     const auditorBaseUrl = body.auditorBaseUrl || writingBaseUrl;
     const auditorTemperature = body.auditorTemperature ?? 0.2;
 
-    if (articles.length === 0) {
-      return NextResponse.json({ error: "集群中至少需要一篇文章。" }, { status: 400 });
-    }
     if (!writingModelName) {
       return NextResponse.json({ error: "请提供写作模型名称。" }, { status: 400 });
     }
@@ -185,6 +234,7 @@ export async function POST(request: NextRequest) {
       };
 
       createProject(project);
+      createdProjectIds.push(projectId);
 
       // Create project state
       const state = createInitialProjectState(project, {
@@ -241,6 +291,26 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
+    // Rollback: clean up any partially created resources
+    // Note: clusterId may not exist if creation failed before cluster record
+    try {
+      const { deleteClusterRecords } = await import("@/lib/db");
+      const { deleteProjectRecords } = await import("@/lib/db");
+      // Try to delete cluster if it was created
+      try { deleteClusterRecords(clusterId); } catch { /* may not exist */ }
+      // Try to delete any created projects
+      for (const pid of createdProjectIds) {
+        try { deleteProjectRecords(pid); } catch { /* may not exist */ }
+      }
+      // Clean up cluster directory
+      try {
+        const clusterDirPath = getClusterStorageRoot() + "/" + clusterId;
+        if (fs.existsSync(clusterDirPath)) {
+          fs.rmSync(clusterDirPath, { recursive: true, force: true });
+        }
+      } catch { /* non-fatal */ }
+    } catch { /* rollback failed, log but don't throw */ }
+
     return NextResponse.json({ error: sanitizeError(error) }, { status: 400 });
   }
 }

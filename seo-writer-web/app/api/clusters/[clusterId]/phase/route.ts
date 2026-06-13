@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
+import fs from "node:fs";
+import path from "node:path";
 import { getCluster, listClusterArticles } from "@/lib/db";
 import { readClusterState, approveClusterPhase, setClusterPhaseStatus } from "@/lib/clusterState";
 import { runClusterPhase0, runPhase1b, checkClusterPhaseCompletion, generateBatchReview } from "@/lib/clusterRunner";
 import { runPhase, runPhase4Chunked, approvePhase } from "@/lib/phaseRunner";
-import { readOutputForPhase, getClusterDir } from "@/lib/fileStorage";
+import { readOutputForPhase, getClusterDir, getClusterStatePath } from "@/lib/fileStorage";
 import { sanitizeError } from "@/lib/validators";
 import type { ClusterPhaseId, PhaseId } from "@/lib/types";
 
@@ -40,12 +42,15 @@ const CLUSTER_MANUAL_REVIEW_PHASES: ClusterPhaseId[] = [
 async function runPhaseForAllArticles(
   clusterId: string,
   clusterPhase: ClusterPhaseId,
-  articlePhase: PhaseId
+  articlePhase: PhaseId,
+  onArticleStart?: () => void
 ): Promise<string | null> {
   const articles = listClusterArticles(clusterId);
   setClusterPhaseStatus(clusterId, clusterPhase, "running");
 
   for (const article of articles) {
+    // Write heartbeat before each article (prevents stale detection)
+    if (onArticleStart) onArticleStart();
     try {
       // Use chunked mode for Phase 4 (long articles need chunked audit)
       if (articlePhase === "phase4") {
@@ -125,19 +130,22 @@ export async function GET(
   const state = readClusterState(clusterId);
 
   // Detect and recover stale "running" states (from server crashes)
+  // Uses heartbeat file written by background workers. Timeout: 30 minutes.
   const now = Date.now();
+  const STALE_TIMEOUT_MS = 30 * 60 * 1000;
   for (const [phaseId, phaseState] of Object.entries(state.phases)) {
     if (phaseState.status === "running") {
-      // Check if the cluster_state.json was last modified more than 10 minutes ago
       try {
-        const fs = await import("node:fs");
-        const statePath = (await import("@/lib/fileStorage")).getClusterStatePath(clusterId);
-        const stat = fs.statSync(statePath);
-        const elapsed = now - stat.mtimeMs;
-        if (elapsed > 10 * 60 * 1000) {
-          // Stale running state - mark as failed so user can retry
-          const { setClusterPhaseStatus: setStatus } = await import("@/lib/clusterState");
-          setStatus(clusterId, phaseId as ClusterPhaseId, "failed", `超时自动恢复（运行超过 ${Math.round(elapsed / 60000)} 分钟）`);
+        const heartbeatPath = path.join(getClusterDir(clusterId), ".phase_heartbeat");
+        let lastActivity = 0;
+        if (fs.existsSync(heartbeatPath)) {
+          lastActivity = fs.statSync(heartbeatPath).mtimeMs;
+        } else {
+          lastActivity = fs.statSync(getClusterStatePath(clusterId)).mtimeMs;
+        }
+        const elapsed = now - lastActivity;
+        if (elapsed > STALE_TIMEOUT_MS) {
+          setClusterPhaseStatus(clusterId, phaseId as ClusterPhaseId, "failed", `超时自动恢复（无活动超过 ${Math.round(elapsed / 60000)} 分钟）`);
         }
       } catch { /* ignore */ }
     }
@@ -237,7 +245,16 @@ export async function POST(
 
       // Fire-and-forget: schedule work after response is sent
       const runAsync = async () => {
+        // Write heartbeat file so stale detection knows work is in progress
+        const writeHeartbeat = () => {
+          try {
+            const heartbeatPath = path.join(getClusterDir(clusterId), ".phase_heartbeat");
+            fs.writeFileSync(heartbeatPath, new Date().toISOString(), "utf-8");
+          } catch { /* non-fatal */ }
+        };
+
         try {
+          writeHeartbeat();
           if (phase === "cluster_phase0") {
             await runClusterPhase0(clusterId);
           } else if (phase === "cluster_phase1b") {
@@ -249,7 +266,7 @@ export async function POST(
           } else {
             const articlePhase = CLUSTER_TO_ARTICLE_PHASE[phase as ClusterPhaseId];
             if (articlePhase) {
-              await runPhaseForAllArticles(clusterId, phase as ClusterPhaseId, articlePhase);
+              await runPhaseForAllArticles(clusterId, phase as ClusterPhaseId, articlePhase, writeHeartbeat);
             }
           }
         } catch (error) {

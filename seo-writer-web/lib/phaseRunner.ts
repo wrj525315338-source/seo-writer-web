@@ -1594,7 +1594,7 @@ async function runPromptPhase(project: Project, phase: PhaseId): Promise<string>
     phase0: [],
     phase1: [summary, brief, extracted, outlineTemplate],
     phase2: [summary, outline, writingChecklist, languageContentRequirementsPath()],
-    phase3: [summary, outline, firstTwo, languageContentRequirementsPath()],
+    phase3: [summary, outline, firstTwo, brief, languageContentRequirementsPath()],
     phase4: [writingChecklist, full],
     phase5: [summary, full, checklist]
   };
@@ -1617,6 +1617,44 @@ async function runPromptPhase(project: Project, phase: PhaseId): Promise<string>
 
   const args = commonPromptArgs(project.id, phase, inputMap[phase], output);
   await runSkillPrompt(project, args, "writing");
+
+  // Phase 3: validate word count after generation
+  if (phase === "phase3") {
+    const articleContent = fs.readFileSync(output, "utf-8");
+    const wordCount = countVisibleArticleWords(articleContent);
+    const wordRange = getWordCountRange(project.id);
+    if (wordCount < wordRange.min) {
+      // Attempt word count repair (up to 2 retries)
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const repairInput = outputPath(project.id, `phase3_repair_input_${attempt}.md`);
+        fs.writeFileSync(repairInput, [
+          "# Word Count Repair",
+          "",
+          `Current word count: ${wordCount} words`,
+          `Target range: ${wordRange.min}-${wordRange.max} words`,
+          `Deficit: ${wordRange.min - wordCount} words below minimum`,
+          "",
+          "## Current Article",
+          "",
+          articleContent,
+        ].join("\n"), "utf-8");
+        try {
+          await runSkillPrompt(project, [
+            "scripts/run_prompt.py",
+            "--prompt", "prompts/phase3_length_repair.md",
+            "--input", repairInput,
+            "--output", output,
+          ], "writing");
+          const repaired = fs.readFileSync(output, "utf-8");
+          const repairedCount = countVisibleArticleWords(repaired);
+          if (repairedCount >= wordRange.min) break;
+        } catch {
+          // repair failed, keep original
+        }
+      }
+    }
+  }
+
   return output;
 }
 

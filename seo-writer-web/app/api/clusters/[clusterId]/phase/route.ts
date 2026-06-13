@@ -68,6 +68,8 @@ async function runPhaseForAllArticles(
 
 /**
  * Approve an article-level phase for all articles in the cluster.
+ * For auto-approved phases (like Phase 4), just verify all articles are approved.
+ * For manual-review phases (like Phase 1, Phase 5), call approvePhase for each.
  */
 async function approvePhaseForAllArticles(
   clusterId: string,
@@ -75,8 +77,26 @@ async function approvePhaseForAllArticles(
   articlePhase: PhaseId
 ): Promise<string | null> {
   const articles = listClusterArticles(clusterId);
+  const { requiresManualReview } = await import("@/lib/validators");
+
   for (const article of articles) {
     try {
+      const { readProjectState } = await import("@/lib/projectState");
+      const state = readProjectState(article.project_id);
+      const phaseState = state.phases[articlePhase];
+
+      // Skip already-approved articles (idempotent)
+      if (phaseState.approved) continue;
+
+      // For auto-approved phases, verify they completed successfully
+      if (!requiresManualReview(articlePhase)) {
+        if (phaseState.status !== "approved" && phaseState.status !== "waiting_review") {
+          return `${article.article_slug} ${articlePhase} 尚未完成 (status: ${phaseState.status})`;
+        }
+        continue;
+      }
+
+      // For manual-review phases, call approvePhase
       await approvePhase(article.project_id, articlePhase);
     } catch (error) {
       return `${article.article_slug} ${articlePhase} 审批失败: ${sanitizeError(error)}`;
@@ -97,6 +117,28 @@ export async function GET(
   }
 
   const state = readClusterState(clusterId);
+
+  // Detect and recover stale "running" states (from server crashes)
+  const now = Date.now();
+  for (const [phaseId, phaseState] of Object.entries(state.phases)) {
+    if (phaseState.status === "running") {
+      // Check if the cluster_state.json was last modified more than 10 minutes ago
+      try {
+        const fs = await import("node:fs");
+        const statePath = (await import("@/lib/fileStorage")).getClusterStatePath(clusterId);
+        const stat = fs.statSync(statePath);
+        const elapsed = now - stat.mtimeMs;
+        if (elapsed > 10 * 60 * 1000) {
+          // Stale running state - mark as failed so user can retry
+          const { setClusterPhaseStatus: setStatus } = await import("@/lib/clusterState");
+          setStatus(clusterId, phaseId as ClusterPhaseId, "failed", `超时自动恢复（运行超过 ${Math.round(elapsed / 60000)} 分钟）`);
+        }
+      } catch { /* ignore */ }
+    }
+  }
+
+  // Re-read state after potential recovery
+  const freshState = readClusterState(clusterId);
   const progress = (await import("@/lib/clusterRunner")).getClusterProgress(clusterId);
   const articles = listClusterArticles(clusterId);
 
@@ -123,7 +165,7 @@ export async function GET(
     if (fs.existsSync(planPath)) crossLinkPlan = fs.readFileSync(planPath, "utf-8");
   } catch { /* ignore */ }
 
-  return NextResponse.json({ cluster, state, progress, outlines, fullArticles, crossLinkPlan });
+  return NextResponse.json({ cluster, state: freshState, progress, outlines, fullArticles, crossLinkPlan });
 }
 
 export async function POST(
@@ -140,56 +182,58 @@ export async function POST(
     const body = await request.json();
     const { action, phase } = body as { action: string; phase?: ClusterPhaseId };
 
-    // ===== Cluster-specific phases =====
+    // ===== Approve actions (fast, synchronous) =====
 
-    if (action === "run" && phase === "cluster_phase0") {
-      await runClusterPhase0(clusterId);
-      return NextResponse.json({ ok: true });
-    }
-
-    if (action === "run" && phase === "cluster_phase1b") {
-      await runPhase1b(clusterId);
-      return NextResponse.json({ ok: true });
-    }
-
-    if (action === "approve" && phase === "cluster_phase1b") {
-      approveClusterPhase(clusterId, "cluster_phase1b");
-      return NextResponse.json({ ok: true });
-    }
-
-    // ===== Batch confirm =====
-
-    if (action === "run" && phase === "cluster_batch_confirm") {
-      setClusterPhaseStatus(clusterId, "cluster_batch_confirm", "running");
-      try {
-        await generateBatchReview(clusterId);
-        setClusterPhaseStatus(clusterId, "cluster_batch_confirm", "waiting_review");
-      } catch (error) {
-        setClusterPhaseStatus(clusterId, "cluster_batch_confirm", "failed", String(error));
-        return NextResponse.json({ error: sanitizeError(error) }, { status: 400 });
+    if (action === "approve") {
+      if (phase === "cluster_phase1b") {
+        approveClusterPhase(clusterId, "cluster_phase1b");
+        return NextResponse.json({ ok: true });
       }
-      return NextResponse.json({ ok: true });
+      if (phase === "cluster_batch_confirm") {
+        approveClusterPhase(clusterId, "cluster_batch_confirm");
+        return NextResponse.json({ ok: true });
+      }
+      const articlePhase = phase ? CLUSTER_TO_ARTICLE_PHASE[phase] : undefined;
+      if (articlePhase) {
+        const error = await approvePhaseForAllArticles(clusterId, phase!, articlePhase);
+        if (error) return NextResponse.json({ error }, { status: 400 });
+        return NextResponse.json({ ok: true });
+      }
     }
 
-    if (action === "approve" && phase === "cluster_batch_confirm") {
-      approveClusterPhase(clusterId, "cluster_batch_confirm");
-      return NextResponse.json({ ok: true });
-    }
+    // ===== Run actions (long-running, fire-and-forget) =====
+    // Return 202 immediately. Work continues in background.
+    // Frontend polls via ClusterDashboard.
 
-    // ===== Generic per-article phase dispatch (Phase 1-5) =====
+    if (action === "run") {
+      // Fire-and-forget: schedule work after response is sent
+      const runAsync = async () => {
+        try {
+          if (phase === "cluster_phase0") {
+            await runClusterPhase0(clusterId);
+          } else if (phase === "cluster_phase1b") {
+            await runPhase1b(clusterId);
+          } else if (phase === "cluster_batch_confirm") {
+            setClusterPhaseStatus(clusterId, "cluster_batch_confirm", "running");
+            await generateBatchReview(clusterId);
+            setClusterPhaseStatus(clusterId, "cluster_batch_confirm", "waiting_review");
+          } else {
+            const articlePhase = CLUSTER_TO_ARTICLE_PHASE[phase as ClusterPhaseId];
+            if (articlePhase) {
+              await runPhaseForAllArticles(clusterId, phase as ClusterPhaseId, articlePhase);
+            }
+          }
+        } catch (error) {
+          if (phase) {
+            setClusterPhaseStatus(clusterId, phase as ClusterPhaseId, "failed", String(error));
+          }
+        }
+      };
 
-    const articlePhase = phase ? CLUSTER_TO_ARTICLE_PHASE[phase] : undefined;
+      // Use setTimeout(0) to defer execution after response is sent
+      setTimeout(() => { runAsync(); }, 0);
 
-    if (action === "run" && articlePhase) {
-      const error = await runPhaseForAllArticles(clusterId, phase!, articlePhase);
-      if (error) return NextResponse.json({ error }, { status: 400 });
-      return NextResponse.json({ ok: true });
-    }
-
-    if (action === "approve" && articlePhase) {
-      const error = await approvePhaseForAllArticles(clusterId, phase!, articlePhase);
-      if (error) return NextResponse.json({ error }, { status: 400 });
-      return NextResponse.json({ ok: true });
+      return NextResponse.json({ ok: true, async: true }, { status: 202 });
     }
 
     return NextResponse.json({ error: `未知操作: ${action} ${phase}` }, { status: 400 });

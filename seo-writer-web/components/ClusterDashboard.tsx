@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { encodeProjectId } from "@/lib/routeParams";
 import type { ClusterPhaseId, ClusterState } from "@/lib/types";
@@ -63,11 +63,13 @@ export default function ClusterDashboard({ clusterId, clusterState, articleProgr
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "run", phase: currentPhase }),
       });
-      if (!response.ok) {
-        const data = await response.json();
+      const data = await response.json();
+      if (!response.ok && response.status !== 202) {
         setError(data.error || "运行失败");
+      } else {
+        // Phase started (either sync or async). Poll for status.
+        router.refresh();
       }
-      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
     } finally {
@@ -76,6 +78,27 @@ export default function ClusterDashboard({ clusterId, clusterState, articleProgr
   }
 
   const canRun = currentPhaseState?.status === "not_started" || currentPhaseState?.status === "failed";
+  const isRunning = currentPhaseState?.status === "running";
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Auto-poll when a phase is running (background async work)
+  useEffect(() => {
+    if (isRunning && !pollRef.current) {
+      pollRef.current = setInterval(() => {
+        router.refresh();
+      }, 5000);
+    }
+    if (!isRunning && pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [isRunning, router]);
 
   return (
     <div className="cluster-dashboard">
@@ -106,8 +129,8 @@ export default function ClusterDashboard({ clusterId, clusterState, articleProgr
             {running ? "运行中..." : `运行 ${clusterPhaseLabels[currentPhase]}`}
           </button>
         )}
-        {currentPhaseState?.status === "running" && (
-          <span style={{ color: "#3b82f6", marginLeft: "0.5rem" }}>⏳ 阶段运行中...</span>
+        {isRunning && (
+          <span style={{ color: "#3b82f6", marginLeft: "0.5rem" }}>⏳ 阶段运行中（自动刷新中）...</span>
         )}
         {error && <p style={{ color: "#ef4444", marginTop: "0.5rem" }}>{error}</p>}
       </div>

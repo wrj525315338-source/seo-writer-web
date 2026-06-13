@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import fs from "node:fs";
 import path from "node:path";
 import { getCluster, listClusterArticles } from "@/lib/db";
@@ -276,8 +276,8 @@ export async function POST(
         }
       };
 
-      // Use setTimeout(0) to defer execution after response is sent
-      setTimeout(() => { runAsync(); }, 0);
+      // Use Next.js after() for durable async execution (works in serverless)
+      after(() => { runAsync(); });
 
       return NextResponse.json({ ok: true, async: true }, { status: 202 });
     }

@@ -50,6 +50,7 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
   const [originalFileName, setOriginalFileName] = useState("");
   const [briefContent, setBriefContent] = useState("");
   const [modelConfig, setModelConfig] = useState<ModelConfig | null>(null);
+  const [sessionId, setSessionId] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
   async function handleParse(e: FormEvent<HTMLFormElement>) {
@@ -96,6 +97,9 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
       if (data.briefContent) {
         setBriefContent(data.briefContent);
       }
+      if (data.sessionId) {
+        setSessionId(data.sessionId);
+      }
       setStep("preview");
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
@@ -123,6 +127,7 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
           crossLinkRules: parsed.crossLinkRules,
           specialRequirements: parsed.specialRequirements,
           briefContent,
+          sessionId,
           ...modelConfig,
         }),
       });

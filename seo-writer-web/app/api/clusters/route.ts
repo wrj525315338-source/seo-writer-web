@@ -136,9 +136,35 @@ export async function POST(request: NextRequest) {
       saveClusterBrief(clusterId, briefContent);
     }
 
-    // Resolve shared writing guidelines and examples
-    const sharedGuidelines = getSharedWritingGuidelineFiles();
-    const sharedExamples = getSharedExampleArticleFiles();
+    // Resolve writing guidelines and examples
+    // Priority: session files (from parse API) > global shared files
+    const sessionId: string = body.sessionId || "";
+    const sessionDir = sessionId
+      ? path.join(process.cwd(), "storage", "temp", `parse_${sessionId}`)
+      : "";
+
+    let sharedGuidelines: string[] = [];
+    let sharedExamples: string[] = [];
+
+    if (sessionDir && fs.existsSync(sessionDir)) {
+      // Use session-scoped files
+      sharedGuidelines = fs.readdirSync(sessionDir)
+        .filter(f => f.startsWith("guideline_"))
+        .map(f => path.join(sessionDir, f));
+      sharedExamples = fs.readdirSync(sessionDir)
+        .filter(f => f.startsWith("example_"))
+        .map(f => path.join(sessionDir, f));
+    }
+
+    // Fall back to global shared files if session has none
+    if (sharedGuidelines.length === 0) {
+      const { getSharedWritingGuidelineFiles } = await import("@/lib/sharedFiles");
+      sharedGuidelines = getSharedWritingGuidelineFiles();
+    }
+    if (sharedExamples.length === 0) {
+      const { getSharedExampleArticleFiles } = await import("@/lib/sharedFiles");
+      sharedExamples = getSharedExampleArticleFiles();
+    }
 
     // Create cluster record in DB
     const cluster: Cluster = {
@@ -278,6 +304,11 @@ export async function POST(request: NextRequest) {
     const crossLinkPlanContent = generateCrossLinkPlanMarkdown(articles, crossLinkRules, specialRequirements);
     const crossLinkPlanPath = path.join(getClusterStorageRoot(), clusterId, "00_cross_link_plan.md");
     fs.writeFileSync(crossLinkPlanPath, crossLinkPlanContent, "utf-8");
+
+    // Clean up session directory (files already copied to project dirs)
+    if (sessionDir && fs.existsSync(sessionDir)) {
+      try { fs.rmSync(sessionDir, { recursive: true, force: true }); } catch { /* non-fatal */ }
+    }
 
     return NextResponse.json(
       {

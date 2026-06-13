@@ -53,7 +53,7 @@ function extractArticleTable(text: string): RawArticleRow[] {
         title: cells[1].replace(/\*\*/g, ""),
         mainKeyword: cells[2].replace(/\*\*/g, ""),
         secondaryKeyword: cells[3].replace(/\*\*/g, "").replace("—", ""),
-        slug: cells[4].replace(/\*\*/g, ""),
+        slug: cells[4].replace(/\*\*/g, "").replace(/`/g, ""),
         structureType: cells[5].replace(/\*\*/g, ""),
       });
     }
@@ -94,7 +94,7 @@ function extractCrossLinkTable(text: string): RawCrossLinkRow[] {
 
 /** Extract slug from raw text like "Pillar → A" or "/how-to-meet-international-friends-online" */
 function resolveSlug(raw: string, articles: RawArticleRow[]): string {
-  const trimmed = raw.trim().replace(/\*\*/g, "");
+  const trimmed = raw.trim().replace(/\*\*/g, "").replace(/`/g, "");
   // If it's already a slug
   if (trimmed.startsWith("/")) return trimmed;
   // Map role names to slugs

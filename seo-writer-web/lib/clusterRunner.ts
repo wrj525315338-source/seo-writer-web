@@ -196,6 +196,13 @@ export async function runClusterPhase0(clusterId: string): Promise<void> {
       // Copy brief to inputs for the article
       const articleInputsDir = getInputsDir(article.project_id);
       fs.mkdirSync(articleInputsDir, { recursive: true });
+
+      // Create extracted_materials.md (required by Phase 1 input list)
+      // Use the shared summary as the extracted materials source
+      const extractedSrc = path.join(outputsDir, "00_shared_material_summary.md");
+      if (fs.existsSync(extractedSrc)) {
+        fs.copyFileSync(extractedSrc, path.join(articleOutputsDir, "extracted_materials.md"));
+      }
     }
 
     // Mark each article's Phase 0 as approved so Phase 1 can run

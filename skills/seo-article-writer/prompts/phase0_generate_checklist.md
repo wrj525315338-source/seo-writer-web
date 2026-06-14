@@ -20,7 +20,7 @@ Include:
 - brand spelling, brand data, product modules, and product placement rules
 - PR red lines and zero-tolerance issues
 - table/list formatting requirements
-- final visible article length: 1200-1600 words unless the user gives a stricter project-specific range
+- final visible article length: use the word count range from the project brief's "Target word count" field; if not specified, default to 1200-1600 words
 - source/evidence requirements and uncertain-claim handling
 - Google Docs / final formatting requirements
 - language style requirements from `language_content_requirements.md`
@@ -63,7 +63,7 @@ Use stable item IDs so Phase 4 can cite them:
 ## C05 Formatting, Tables, And Final Delivery
 
 - [ ] C05-01 ...
-- [ ] C05-02 Final visible article text is 1200-1600 words, counting headings, body, tables, and FAQ, but excluding SEO metadata, prompts, checklist reports, and image planning files.
+- [ ] C05-02 Final visible article text matches the word count range from the brief's "Target word count" field, counting headings, body, tables, and FAQ, but excluding SEO metadata, prompts, checklist reports, and image planning files.
 ```
 
 Do not create checklist items that require image placeholders, image descriptions, AI image prompts, image counts, image positions, or markdown image syntax in Phase 1 through Phase 5. Image requirements are handled later by the internal Phase 5.5 image planner.

@@ -33,7 +33,7 @@ If review feedback conflicts with the guidelines, do not apply it directly. Expl
 6. Stop after Phase 1 until the user explicitly approves the outline.
 7. In Phase 2, let the Writing Model draft the first two H2 sections, then let the Auditor Model polish them into the final `02_first_two_sections.md`; auto-approve Phase 2 after success.
 8. Run checklist validation before final delivery. Do not generate the final docx until checklist issues are fixed or explicitly marked as requiring user confirmation.
-9. Keep the final visible article text within 1200-1600 words, following the length and density pattern of the provided example articles. Count the visible article body including headings, tables, and FAQ, but exclude SEO metadata, image planning files, prompts, and checklist reports.
+9. Keep the final visible article text within the word count range specified in the article brief's "Target word count" field (default 1200-1600 words if not specified). Count the visible article body including headings, tables, and FAQ, but exclude SEO metadata, image planning files, prompts, and checklist reports.
 
 ## Source Placement
 
@@ -87,7 +87,7 @@ Extract the active standards from the provided guideline files for every project
 - Start the final article file with `SEO Title`, `Description`, and `URL` metadata lines before the H1.
 - Introduce the product only when the article context and active guidelines support it; do not force product placement into the opening.
 - Use a natural, experience-sharing voice. Avoid academic, ad-like, speech-like, template, exaggerated, over-promising, or unsupported absolute wording.
-- Keep the final article concise. Target 1200-1600 words; if the outline, user request, or model draft expands beyond that, compress repeated examples, generic advice, long transitions, and over-explained product details before adding new sections.
+- Keep the final article concise. Target the word count range from the brief's "Target word count" field (default 1200-1600 words); if the outline, user request, or model draft expands beyond that, compress repeated examples, generic advice, long transitions, and over-explained product details before adding new sections.
 - Mention required product data naturally and accurately only when those data appear in the active guidelines.
 - Cover required feature modules only when the guidelines require them, and place functions inside practical scenarios instead of listing features.
 - Preserve exact product spelling and brand wording from the active guidelines.

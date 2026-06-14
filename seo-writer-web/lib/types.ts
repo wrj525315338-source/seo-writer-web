@@ -149,6 +149,124 @@ export interface ProjectState {
   phases: Record<PhaseId, PhaseState>;
 }
 
+// ============ Cluster (Multi-Essay) Types ============
+
+/** Article role within a cluster */
+export type ArticleRole = "pillar" | "support_a" | "support_b" | "support_c";
+
+/** Article type determines word count range */
+export type ArticleType = "guide" | "app_list" | "how_to";
+
+/** Word count range by article type */
+export const WORD_COUNT_BY_TYPE: Record<ArticleType, { min: number; max: number }> = {
+  guide: { min: 2500, max: 3500 },
+  app_list: { min: 2000, max: 2500 },
+  how_to: { min: 2000, max: 2800 },
+};
+
+/** Article definition within a cluster */
+export interface ClusterArticle {
+  slug: string;
+  title: string;
+  role: ArticleRole;
+  primaryKeyword: string;
+  secondaryKeywords: string[];
+  targetWordCount: { min: number; max: number };
+  articleType: ArticleType;
+  searchIntent?: string;
+}
+
+/** Cross-link rule between articles */
+export interface CrossLinkRule {
+  sourceSlug: string;
+  targetSlug: string;
+  anchorText: string;
+  placementHint: string;
+  direction: "bidirectional" | "unidirectional";
+}
+
+/** Special requirements extracted from brief */
+export interface SpecialRequirements {
+  bannedCompetitors: string[];
+  brandData: string[];
+  requiredModules: string[];
+  collisionWarnings: string[];
+  antiAiRules: string[];
+}
+
+/** Result of parsing a cluster brief */
+export interface ParsedCluster {
+  clusterName: string;
+  brandName: string;
+  language: string;
+  articles: ClusterArticle[];
+  crossLinkRules: CrossLinkRule[];
+  specialRequirements: SpecialRequirements;
+  sourceType: "markdown" | "excel" | "docx" | "text";
+}
+
+/** Cluster-level phase IDs */
+export type ClusterPhaseId =
+  | "cluster_phase0"
+  | "cluster_phase1"
+  | "cluster_phase1b"
+  | "cluster_phase2"
+  | "cluster_phase3"
+  | "cluster_phase4"
+  | "cluster_phase5"
+  | "cluster_batch_confirm";
+
+/** Cluster phase status */
+export type ClusterPhaseStatus = "not_started" | "running" | "waiting_review" | "approved" | "failed";
+
+/** Cluster entity stored in DB */
+export interface Cluster {
+  id: string;
+  name: string;
+  brand_name: string;
+  language: string;
+  brief_source_path: string;
+  shared_summary_path: string;
+  shared_checklist_path: string;
+  cross_link_plan_path: string;
+  current_phase: ClusterPhaseId;
+  status: ProjectStatus;
+  blog_base_url: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Cluster-article association stored in DB */
+export interface ClusterArticleRecord {
+  id: string;
+  cluster_id: string;
+  project_id: string;
+  article_role: ArticleRole;
+  article_slug: string;
+  article_type: ArticleType;
+  target_word_min: number;
+  target_word_max: number;
+  sort_order: number;
+}
+
+/** Cluster state stored as JSON on disk */
+export interface ClusterState {
+  clusterId: string;
+  clusterName: string;
+  clusterSlug: string;
+  articles: ClusterArticle[];
+  crossLinkRules: CrossLinkRule[];
+  specialRequirements: SpecialRequirements;
+  sharedChecklistPath: string;
+  sharedSummaryPath: string;
+  crossLinkPlanPath: string;
+  currentPhase: ClusterPhaseId;
+  blogBaseUrl: string;
+  phases: Record<ClusterPhaseId, PhaseState>;
+}
+
+// ============ Existing Single-Article Types ============
+
 export interface ProjectFormData {
   projectName: string;
   language: string;

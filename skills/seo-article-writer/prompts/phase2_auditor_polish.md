@@ -29,7 +29,7 @@ The revised text must:
 - keep H2/H3 hierarchy clear
 - use an experience-sharing, natural, direct-answer voice
 - prefer short sentences, simple words, and concrete actions
-- keep the first two H2 sections within the approved outline word budget; for a 1200-1600 word final article, they should normally total about 350-550 words unless the outline assigns a different budget
+- keep the first two H2 sections within the approved outline word budget; the first two H2 sections should normally total about 15-20% of the target word count unless the outline assigns a different budget
 - cut repeated examples, generic transitions, and over-explained product details before adding new text
 - remove academic, ad-like, speech-like, template, vague-summary, or over-promising language
 - avoid sudden brand insertion and repeated product emphasis

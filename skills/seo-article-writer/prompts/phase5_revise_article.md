@@ -21,7 +21,7 @@ The revised article must:
   - `**SEO Title:** ...`
   - `**Description:** ...`
   - `**URL:** ...`
-- keep the revised visible article text within 1200-1600 words unless the user gives a stricter range
+- keep the revised visible article text within the word count range from the project brief's "Target word count" field; if not specified, default to 1200-1600 words
 - if the current article is too long, reduce length by cutting repeated explanations, generic examples, long transitions, and over-detailed product descriptions while preserving the approved outline and required facts
 - preserve the approved article language
 - keep the approved outline and heading hierarchy unless the review comment explicitly asks for a compliant structural change

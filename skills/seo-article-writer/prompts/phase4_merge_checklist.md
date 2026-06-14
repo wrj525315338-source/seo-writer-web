@@ -12,7 +12,7 @@ Do not generate a new checklist. Do not add criteria that were not in the fixed 
 2. Preserve checklist item IDs when available.
 3. Mark high-risk issues clearly.
 4. If any chunk report has unresolved issues or remaining questions, do not mark the checklist as passed.
-5. Check the final visible article length against the 1200-1600 word target unless the project brief gives a stricter range.
+5. Check the final visible article length against the word count range from the project brief's "Target word count" field; if not specified, default to 1200-1600 words.
 6. If all chunk reports say no issues and the article length is within range, mark the checklist as passed.
 
 ## Output Rules

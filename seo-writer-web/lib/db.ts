@@ -325,6 +325,7 @@ export function deleteProjectRecords(projectId: string): boolean {
   try {
     database.prepare("DELETE FROM review_comments WHERE project_id = ?").run(id);
     database.prepare("DELETE FROM phase_runs WHERE project_id = ?").run(id);
+    database.prepare("DELETE FROM cluster_articles WHERE project_id = ?").run(id);
     database.prepare("DELETE FROM projects WHERE id = ?").run(id);
     database.exec("COMMIT");
     return true;

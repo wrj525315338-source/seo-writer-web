@@ -151,9 +151,10 @@ export default function ProjectForm({ sharedFiles }: ProjectFormProps) {
             label="writingGuidelineFile"
             required={!sharedFiles.hasWritingGuideline}
             accept=".docx,.pdf,.md,.txt"
+            currentFiles={sharedFiles.hasWritingGuideline ? sharedFiles.writingGuidelineFiles : undefined}
             help={
               sharedFiles.hasWritingGuideline
-                ? `当前已保存：${sharedFiles.writingGuidelineFiles.join(", ")}。不上传新文件将继续复用。`
+                ? "上传新文件将替换当前规范，后续项目也会使用新版本。"
                 : "尚未保存共享写作规范，首次创建项目必须上传。"
             }
           />
@@ -162,9 +163,10 @@ export default function ProjectForm({ sharedFiles }: ProjectFormProps) {
             label="exampleArticleFiles"
             multiple
             accept=".docx,.pdf,.md,.txt"
+            currentFiles={sharedFiles.hasExampleArticles ? sharedFiles.exampleArticleFiles : undefined}
             help={
               sharedFiles.hasExampleArticles
-                ? `当前已保存 ${sharedFiles.exampleArticleFiles.length} 个示例文件。不上传新文件将继续复用。`
+                ? "上传新文件将替换当前示例，后续项目也会使用新版本。"
                 : "尚未保存共享示例文章。可先上传一次，后续项目自动复用。"
             }
           />

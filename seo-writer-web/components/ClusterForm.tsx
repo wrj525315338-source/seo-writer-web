@@ -2,6 +2,7 @@
 
 import { FormEvent, useRef, useState } from "react";
 import ModelConfigForm from "@/components/ModelConfigForm";
+import FileUpload from "@/components/FileUpload";
 import type { ParsedCluster } from "@/lib/types";
 
 type Step = "upload" | "preview" | "creating";
@@ -172,34 +173,22 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
 
           <div className="form-section">
             <h2>长期参考文件（可复用已有）</h2>
-            {sharedFiles.hasWritingGuideline && (
-              <p className="help">已检测到写作规范：{sharedFiles.writingGuidelineFiles.join(", ")}。如不上传新文件，将自动复用。</p>
-            )}
-            {!sharedFiles.hasWritingGuideline && (
-              <div className="field">
-                <label htmlFor="writingGuidelineFile">写作规范（首次必须上传）</label>
-                <input
-                  id="writingGuidelineFile"
-                  name="writingGuidelineFile"
-                  type="file"
-                  accept=".docx,.pdf,.md,.txt"
-                  required
-                />
-              </div>
-            )}
-            {sharedFiles.hasExampleArticles && (
-              <p className="help">已检测到示例文章：{sharedFiles.exampleArticleFiles.length} 篇。如不上传新文件，将自动复用。</p>
-            )}
-            <div className="field">
-              <label htmlFor="exampleArticleFiles">示例文章（可选，可多选）</label>
-              <input
-                id="exampleArticleFiles"
-                name="exampleArticleFiles"
-                type="file"
-                accept=".docx,.pdf,.md,.txt"
-                multiple
-              />
-            </div>
+            <FileUpload
+              name="writingGuidelineFile"
+              label="写作规范"
+              required={!sharedFiles.hasWritingGuideline}
+              accept=".docx,.pdf,.md,.txt"
+              currentFiles={sharedFiles.hasWritingGuideline ? sharedFiles.writingGuidelineFiles : undefined}
+              help={sharedFiles.hasWritingGuideline ? "上传新文件将替换当前规范。" : "首次必须上传。"}
+            />
+            <FileUpload
+              name="exampleArticleFiles"
+              label="示例文章（可选，可多选）"
+              multiple
+              accept=".docx,.pdf,.md,.txt"
+              currentFiles={sharedFiles.hasExampleArticles ? sharedFiles.exampleArticleFiles : undefined}
+              help={sharedFiles.hasExampleArticles ? "上传新文件将替换当前示例。" : "可先上传一次，后续自动复用。"}
+            />
           </div>
 
           <ModelConfigForm />

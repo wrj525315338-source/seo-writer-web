@@ -21,6 +21,10 @@ export default function DashboardPage() {
             <ListChecks size={16} />
             管理
           </a>
+          <a className="button ghost" href="/clusters/new">
+            <Plus size={16} />
+            新建集群项目
+          </a>
           <a className="button primary" href="/projects/new">
             <Plus size={16} />
             新建文章项目

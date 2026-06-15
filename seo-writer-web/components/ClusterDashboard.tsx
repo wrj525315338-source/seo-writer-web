@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { encodeProjectId } from "@/lib/routeParams";
 import type { ClusterPhaseId, ClusterState } from "@/lib/types";
+import ArticlePreviewModal from "./ArticlePreviewModal";
 
 interface ArticleProgress {
   slug: string;
@@ -14,10 +15,18 @@ interface ArticleProgress {
   phaseStatus: string;
 }
 
+interface ArticleContent {
+  slug: string;
+  role: string;
+  outline: string;
+  fullArticle: string;
+}
+
 interface ClusterDashboardProps {
   clusterId: string;
   clusterState: ClusterState;
   articleProgress: ArticleProgress[];
+  articleContents?: ArticleContent[];
 }
 
 const clusterPhaseLabels: Record<ClusterPhaseId, string> = {
@@ -47,12 +56,22 @@ const statusColors: Record<string, string> = {
   failed: "#ef4444",
 };
 
-export default function ClusterDashboard({ clusterId, clusterState, articleProgress }: ClusterDashboardProps) {
+export default function ClusterDashboard({
+  clusterId,
+  clusterState,
+  articleProgress,
+  articleContents = [],
+}: ClusterDashboardProps) {
   const currentPhase = clusterState.currentPhase;
   const currentPhaseState = clusterState.phases[currentPhase];
   const router = useRouter();
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  const [previewArticle, setPreviewArticle] = useState<ArticleContent | null>(null);
+
+  // Derive review states from clusterState
+  const isOutlineReview = currentPhase === "cluster_phase1" && currentPhaseState?.status === "waiting_review";
+  const isArticleReview = currentPhase === "cluster_phase5" && currentPhaseState?.status === "waiting_review";
 
   async function handleRunPhase() {
     setRunning(true);
@@ -165,28 +184,68 @@ export default function ClusterDashboard({ clusterId, clusterState, articleProgr
 
       <h3>文章进度</h3>
       <div className="article-grid">
-        {articleProgress.map((article) => (
-          <div key={article.projectId} className="article-card">
-            <div className="article-header">
-              <span className="article-role">{article.role}</span>
-              <Link
-                href={`/projects/${encodeProjectId(article.projectId)}`}
-                className="article-link"
-              >
-                {article.slug}
-              </Link>
+        {articleProgress.map((article) => {
+          const content = articleContents.find((c) => c.slug === article.slug);
+          const hasOutline = content && content.outline.trim().length > 0;
+          const hasFullArticle = content && content.fullArticle.trim().length > 0;
+
+          return (
+            <div key={article.projectId} className="article-card">
+              <div className="article-header">
+                <span className="article-role">{article.role}</span>
+                <Link
+                  href={`/projects/${encodeProjectId(article.projectId)}`}
+                  className="article-link"
+                >
+                  {article.slug}
+                </Link>
+              </div>
+              <div className="article-status">
+                <span>Phase: {article.currentPhase}</span>
+                <span
+                  style={{ color: statusColors[article.phaseStatus] }}
+                >
+                  {statusLabels[article.phaseStatus] || article.phaseStatus}
+                </span>
+              </div>
+              {content && (
+                <div className="article-actions">
+                  <button
+                    className="btn-sm"
+                    disabled={!hasOutline}
+                    onClick={() => setPreviewArticle(content)}
+                    title={hasOutline ? "查看大纲" : "大纲尚未生成"}
+                  >
+                    查看大纲
+                  </button>
+                  <button
+                    className="btn-sm"
+                    disabled={!hasFullArticle}
+                    onClick={() => setPreviewArticle(content)}
+                    title={hasFullArticle ? "查看全文" : "全文尚未生成"}
+                  >
+                    查看全文
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="article-status">
-              <span>Phase: {article.currentPhase}</span>
-              <span
-                style={{ color: statusColors[article.phaseStatus] }}
-              >
-                {statusLabels[article.phaseStatus] || article.phaseStatus}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+
+      {previewArticle && (
+        <ArticlePreviewModal
+          open={!!previewArticle}
+          onClose={() => setPreviewArticle(null)}
+          slug={previewArticle.slug}
+          role={previewArticle.role}
+          outlineContent={previewArticle.outline}
+          fullArticleContent={previewArticle.fullArticle}
+          clusterId={clusterId}
+          showOutlineReviewLink={isOutlineReview}
+          showArticleReviewLink={isArticleReview}
+        />
+      )}
 
       {clusterState.specialRequirements.bannedCompetitors.length > 0 && (
         <div className="cluster-requirements">
@@ -234,6 +293,18 @@ export default function ClusterDashboard({ clusterId, clusterState, articleProgr
         .article-link { font-weight: 500; color: #2563eb; text-decoration: none; }
         .article-link:hover { text-decoration: underline; }
         .article-status { display: flex; justify-content: space-between; font-size: 0.85rem; color: #6b7280; }
+        .article-actions { display: flex; gap: 0.375rem; margin-top: 0.5rem; }
+        .btn-sm {
+          padding: 0.25rem 0.5rem;
+          font-size: 0.75rem;
+          border: 1px solid #d1d5db;
+          border-radius: 4px;
+          background: #fff;
+          cursor: pointer;
+          color: #374151;
+        }
+        .btn-sm:hover:not(:disabled) { background: #f3f4f6; border-color: #9ca3af; }
+        .btn-sm:disabled { opacity: 0.4; cursor: not-allowed; }
         .cluster-requirements { margin-bottom: 1rem; }
         .cluster-requirements h4 { margin: 0 0 0.25rem; font-size: 0.9rem; }
         .cluster-requirements ul { margin: 0; padding-left: 1.25rem; font-size: 0.85rem; }

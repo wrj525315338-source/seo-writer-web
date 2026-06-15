@@ -1,5 +1,6 @@
-import { getProject, listPhaseRuns, listReviewComments } from "@/lib/db";
+import { getProject, getClusterForProject, listPhaseRuns, listReviewComments } from "@/lib/db";
 import { listOutputFiles, readPreviewForPhase } from "@/lib/fileStorage";
+import Link from "next/link";
 import { readImageGenerationRecoveryStatus } from "@/lib/imageGenerationStatus";
 import { readImageReviewStatus } from "@/lib/imageReview";
 import { readPhase6Status } from "@/lib/phase6Status";
@@ -49,6 +50,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
   }
 
   const state = readProjectState(project.id);
+  const cluster = getClusterForProject(project.id);
   const selectedPhase = phases.includes(resolvedSearchParams.phase as PhaseId)
     ? (resolvedSearchParams.phase as PhaseId)
     : state.currentPhase;
@@ -80,6 +82,31 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
         </div>
         <a className="button ghost" href="/projects">返回项目列表</a>
       </div>
+
+      {cluster && (
+        <div style={{
+          marginBottom: "1rem",
+          padding: "0.5rem 0.75rem",
+          background: "#eff6ff",
+          border: "1px solid #bfdbfe",
+          borderRadius: "6px",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.5rem",
+          fontSize: "0.9rem",
+        }}>
+          <Link
+            href={`/clusters/${cluster.id}`}
+            style={{
+              color: "#1d4ed8",
+              textDecoration: "none",
+              fontWeight: 500,
+            }}
+          >
+            ← 返回集群: {cluster.name}
+          </Link>
+        </div>
+      )}
 
       <section className="detail-layout">
         <aside className="grid">

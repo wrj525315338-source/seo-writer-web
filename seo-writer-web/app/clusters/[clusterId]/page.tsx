@@ -33,7 +33,7 @@ export default async function ClusterDetailPage({
   const currentPhase = state.currentPhase;
   const currentPhaseState = state.phases[currentPhase];
 
-  // Determine which views are available
+  // Determine which views are in active review (waiting_review)
   const isOutlineReview = currentPhase === "cluster_phase1" && currentPhaseState?.status === "waiting_review";
   const isCrossLinkReview = currentPhase === "cluster_phase1b" && currentPhaseState?.status === "waiting_review";
   const isChecklistReview = currentPhase === "cluster_phase4" && currentPhaseState?.status === "waiting_review";
@@ -47,7 +47,6 @@ export default async function ClusterDetailPage({
     : isArticleReview ? "articles"
     : isBatchReview ? "batch"
     : "dashboard";
-  const viewMode = view || defaultView;
 
   // Read data for each view
   const outlines = articles.map((article) => {
@@ -80,6 +79,17 @@ export default async function ClusterDetailPage({
     if (fs.existsSync(reviewPath)) batchReview = fs.readFileSync(reviewPath, "utf-8");
   } catch { /* */ }
 
+  // Content existence checks (for showing tabs even when not in review)
+  const hasOutlines = outlines.some(o => o.content.trim().length > 0);
+  const hasCrossLink = crossLinkPlan.trim().length > 0;
+  const hasChecklist = checklistReports.some(c => c.content.trim().length > 0);
+  const hasArticles = fullArticles.some(a => a.content.trim().length > 0);
+  const hasBatchReview = batchReview.trim().length > 0;
+
+  // Validate view parameter
+  const validViews = ["dashboard", "outlines", "crosslink", "checklist", "articles", "batch"];
+  const viewMode = view && validViews.includes(view) ? view : defaultView;
+
   return (
     <main className="page">
       <div className="page-header">
@@ -94,11 +104,11 @@ export default async function ClusterDetailPage({
       <nav style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", borderBottom: "1px solid #e5e7eb", paddingBottom: "0.5rem", flexWrap: "wrap" }}>
         {([
           { key: "dashboard", label: "Dashboard" },
-          isOutlineReview ? { key: "outlines", label: "大纲审阅" } : null,
-          isCrossLinkReview ? { key: "crosslink", label: "互链审阅" } : null,
-          isChecklistReview ? { key: "checklist", label: "Checklist 审阅" } : null,
-          isArticleReview ? { key: "articles", label: "文章审阅" } : null,
-          isBatchReview ? { key: "batch", label: "批量确认" } : null,
+          (isOutlineReview || hasOutlines) ? { key: "outlines", label: isOutlineReview ? "大纲审阅" : "大纲查看" } : null,
+          (isCrossLinkReview || hasCrossLink) ? { key: "crosslink", label: isCrossLinkReview ? "互链审阅" : "互链查看" } : null,
+          (isChecklistReview || hasChecklist) ? { key: "checklist", label: isChecklistReview ? "Checklist 审阅" : "Checklist 查看" } : null,
+          (isArticleReview || hasArticles) ? { key: "articles", label: isArticleReview ? "文章审阅" : "文章查看" } : null,
+          (isBatchReview || hasBatchReview) ? { key: "batch", label: isBatchReview ? "批量确认" : "批量查看" } : null,
         ].filter((tab): tab is { key: string; label: string } => tab !== null).map((tab) => (
           <a
             key={tab.key}
@@ -122,45 +132,51 @@ export default async function ClusterDetailPage({
           clusterId={clusterId}
           clusterState={state}
           articleProgress={progress}
+          articleContents={outlines.map((o, i) => ({
+            slug: o.slug,
+            role: o.role,
+            outline: o.content,
+            fullArticle: fullArticles[i]?.content || "",
+          }))}
         />
       )}
 
-      {viewMode === "outlines" && isOutlineReview && (
+      {viewMode === "outlines" && (isOutlineReview || hasOutlines) && (
         <OutlineReviewPanel
           clusterId={clusterId}
           clusterState={state}
           outlines={outlines}
           crossLinkPlan={crossLinkPlan}
-          onApprove={() => {}}
+          readOnly={!isOutlineReview}
         />
       )}
 
-      {viewMode === "crosslink" && isCrossLinkReview && (
-        <CrossLinkApprovalView clusterId={clusterId} crossLinkPlan={crossLinkPlan} />
+      {viewMode === "crosslink" && (isCrossLinkReview || hasCrossLink) && (
+        <CrossLinkApprovalView clusterId={clusterId} crossLinkPlan={crossLinkPlan} readOnly={!isCrossLinkReview} />
       )}
 
-      {viewMode === "checklist" && isChecklistReview && (
+      {viewMode === "checklist" && (isChecklistReview || hasChecklist) && (
         <ClusterArticleReview
           clusterId={clusterId}
           articles={checklistReports}
-          onApprove={() => {}}
           approvePhase="cluster_phase4"
+          readOnly={!isChecklistReview}
         />
       )}
 
-      {viewMode === "articles" && isArticleReview && (
+      {viewMode === "articles" && (isArticleReview || hasArticles) && (
         <ClusterArticleReview
           clusterId={clusterId}
           articles={fullArticles}
-          onApprove={() => {}}
+          readOnly={!isArticleReview}
         />
       )}
 
-      {viewMode === "batch" && isBatchReview && (
+      {viewMode === "batch" && (isBatchReview || hasBatchReview) && (
         <BatchReviewView
           clusterId={clusterId}
           batchReview={batchReview}
-          onApprove={() => {}}
+          readOnly={!isBatchReview}
         />
       )}
     </main>

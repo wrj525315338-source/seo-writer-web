@@ -78,7 +78,10 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
     setOriginalFileName(briefFile.name);
 
     // Save model config before the form gets unmounted
-    setModelConfig(extractModelConfig(e.currentTarget));
+    // Use formRef.current instead of e.currentTarget (which may be stale after await)
+    if (formRef.current) {
+      setModelConfig(extractModelConfig(formRef.current));
+    }
 
     try {
       const response = await fetch("/api/clusters/parse", {

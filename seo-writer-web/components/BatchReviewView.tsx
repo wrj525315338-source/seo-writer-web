@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 interface BatchReviewViewProps {
   clusterId: string;
   batchReview: string;
-  onApprove: () => void;
+  onApprove?: () => void;
+  readOnly?: boolean;
 }
 
-export default function BatchReviewView({ clusterId, batchReview, onApprove }: BatchReviewViewProps) {
+export default function BatchReviewView({ clusterId, batchReview, onApprove, readOnly = false }: BatchReviewViewProps) {
   const router = useRouter();
   const [approving, setApproving] = useState(false);
   const [error, setError] = useState("");
@@ -28,7 +29,7 @@ export default function BatchReviewView({ clusterId, batchReview, onApprove }: B
         setError(data.error || "审批失败");
         return;
       }
-      onApprove();
+      onApprove?.();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
@@ -39,7 +40,7 @@ export default function BatchReviewView({ clusterId, batchReview, onApprove }: B
 
   return (
     <div style={{ margin: "1rem 0" }}>
-      <h3>批量确认</h3>
+      <h3>{readOnly ? "批量查看" : "批量确认"}</h3>
       <div style={{
         background: "#f9fafb",
         border: "1px solid #e5e7eb",
@@ -55,13 +56,17 @@ export default function BatchReviewView({ clusterId, batchReview, onApprove }: B
         {batchReview || "批量审查报告尚未生成。请先运行批量确认阶段。"}
       </div>
 
-      {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
+      {!readOnly && (
+        <>
+          {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
 
-      <div style={{ display: "flex", gap: "0.75rem" }}>
-        <button className="btn primary" onClick={handleApprove} disabled={approving || !batchReview}>
-          {approving ? "审批中..." : "确认集群完成 →"}
-        </button>
-      </div>
+          <div style={{ display: "flex", gap: "0.75rem" }}>
+            <button className="btn primary" onClick={handleApprove} disabled={approving || !batchReview}>
+              {approving ? "审批中..." : "确认集群完成 →"}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

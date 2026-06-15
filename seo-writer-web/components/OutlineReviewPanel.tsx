@@ -15,7 +15,8 @@ interface OutlineReviewPanelProps {
     content: string;
   }>;
   crossLinkPlan: string;
-  onApprove: () => void;
+  onApprove?: () => void;
+  readOnly?: boolean;
 }
 
 export default function OutlineReviewPanel({
@@ -24,6 +25,7 @@ export default function OutlineReviewPanel({
   outlines,
   crossLinkPlan,
   onApprove,
+  readOnly = false,
 }: OutlineReviewPanelProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<string>("all");
@@ -47,7 +49,7 @@ export default function OutlineReviewPanel({
         setError(data.error || "审批失败");
         return;
       }
-      onApprove();
+      onApprove?.();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
@@ -157,71 +159,73 @@ export default function OutlineReviewPanel({
         )}
       </div>
 
-      <div className="review-actions">
-        <div className="comment-section">
-          <div className="comment-scope">
-            <label>
-              <input
-                type="radio"
-                name="scope"
-                checked={commentScope === "global"}
-                onChange={() => setCommentScope("global")}
-              />
-              全局意见（影响所有文章）
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="scope"
-                checked={commentScope === "article"}
-                onChange={() => setCommentScope("article")}
-              />
-              单篇意见
-            </label>
-            {commentScope === "article" && (
-              <select
-                value={commentArticle}
-                onChange={(e) => setCommentArticle(e.target.value)}
-              >
-                <option value="">选择文章</option>
-                {outlines.map((o) => (
-                  <option key={o.projectId} value={o.projectId}>
-                    {o.role}: {o.slug}
-                  </option>
-                ))}
-              </select>
+      {!readOnly && (
+        <div className="review-actions">
+          <div className="comment-section">
+            <div className="comment-scope">
+              <label>
+                <input
+                  type="radio"
+                  name="scope"
+                  checked={commentScope === "global"}
+                  onChange={() => setCommentScope("global")}
+                />
+                全局意见（影响所有文章）
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  name="scope"
+                  checked={commentScope === "article"}
+                  onChange={() => setCommentScope("article")}
+                />
+                单篇意见
+              </label>
+              {commentScope === "article" && (
+                <select
+                  value={commentArticle}
+                  onChange={(e) => setCommentArticle(e.target.value)}
+                >
+                  <option value="">选择文章</option>
+                  {outlines.map((o) => (
+                    <option key={o.projectId} value={o.projectId}>
+                      {o.role}: {o.slug}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="输入修改意见..."
+              rows={3}
+            />
+            <button
+              className="btn"
+              onClick={handleRevise}
+              disabled={submitting || !comment.trim() || (commentScope === "article" && !commentArticle)}
+            >
+              {submitting ? "提交中..." : "提交修改意见"}
+            </button>
+          </div>
+
+          {error && <p className="error">{error}</p>}
+
+          <div className="approve-section">
+            <button
+              className="btn primary"
+              onClick={handleApprove}
+              disabled={submitting || outlines.some((o) => !o.content)}
+            >
+              {submitting ? "审批中..." : "批准全部大纲 →"}
+            </button>
+            {outlines.some((o) => !o.content) && (
+              <p className="help">所有文章大纲生成完毕后才能批准。</p>
             )}
           </div>
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="输入修改意见..."
-            rows={3}
-          />
-          <button
-            className="btn"
-            onClick={handleRevise}
-            disabled={submitting || !comment.trim() || (commentScope === "article" && !commentArticle)}
-          >
-            {submitting ? "提交中..." : "提交修改意见"}
-          </button>
         </div>
-
-        {error && <p className="error">{error}</p>}
-
-        <div className="approve-section">
-          <button
-            className="btn primary"
-            onClick={handleApprove}
-            disabled={submitting || outlines.some((o) => !o.content)}
-          >
-            {submitting ? "审批中..." : "批准全部大纲 →"}
-          </button>
-          {outlines.some((o) => !o.content) && (
-            <p className="help">所有文章大纲生成完毕后才能批准。</p>
-          )}
-        </div>
-      </div>
+      )}
 
       <style jsx>{`
         .outline-review { margin: 1rem 0; }

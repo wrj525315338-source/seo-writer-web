@@ -14,11 +14,12 @@ interface ArticleData {
 interface ClusterArticleReviewProps {
   clusterId: string;
   articles: ArticleData[];
-  onApprove: () => void;
+  onApprove?: () => void;
   approvePhase?: "cluster_phase4" | "cluster_phase5";
+  readOnly?: boolean;
 }
 
-export default function ClusterArticleReview({ clusterId, articles, onApprove, approvePhase = "cluster_phase5" }: ClusterArticleReviewProps) {
+export default function ClusterArticleReview({ clusterId, articles, onApprove, approvePhase = "cluster_phase5", readOnly = false }: ClusterArticleReviewProps) {
   const router = useRouter();
   const [activeIndex, setActiveIndex] = useState(0);
   const [approving, setApproving] = useState(false);
@@ -40,7 +41,7 @@ export default function ClusterArticleReview({ clusterId, articles, onApprove, a
         setError(data.error || "审批失败");
         return;
       }
-      onApprove();
+      onApprove?.();
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
@@ -51,9 +52,9 @@ export default function ClusterArticleReview({ clusterId, articles, onApprove, a
 
   return (
     <div style={{ margin: "1rem 0" }}>
-      <h3>文章审阅（逐篇）</h3>
+      <h3>{readOnly ? "文章查看（逐篇）" : "文章审阅（逐篇）"}</h3>
       <p style={{ color: "#6b7280", fontSize: "0.85rem", marginBottom: "1rem" }}>
-        逐篇审阅每篇文章，确认后统一批准。
+        {readOnly ? "逐篇查看每篇文章内容。" : "逐篇审阅每篇文章，确认后统一批准。"}
       </p>
 
       <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1rem", overflowX: "auto" }}>
@@ -107,16 +108,20 @@ export default function ClusterArticleReview({ clusterId, articles, onApprove, a
         </div>
       )}
 
-      {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
+      {!readOnly && (
+        <>
+          {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
 
-      <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", borderTop: "1px solid #e5e7eb", paddingTop: "1rem" }}>
-        <button className="btn primary" onClick={handleApproveAll} disabled={approving || articles.some((a) => !a.content)}>
-          {approving ? "审批中..." : "批准全部文章 →"}
-        </button>
-        {articles.some((a) => !a.content) && (
-          <p className="help" style={{ alignSelf: "center" }}>所有文章生成完毕后才能批准。</p>
-        )}
-      </div>
+          <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", borderTop: "1px solid #e5e7eb", paddingTop: "1rem" }}>
+            <button className="btn primary" onClick={handleApproveAll} disabled={approving || articles.some((a) => !a.content)}>
+              {approving ? "审批中..." : "批准全部文章 →"}
+            </button>
+            {articles.some((a) => !a.content) && (
+              <p className="help" style={{ alignSelf: "center" }}>所有文章生成完毕后才能批准。</p>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

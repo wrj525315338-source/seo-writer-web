@@ -6,9 +6,10 @@ import { useRouter } from "next/navigation";
 interface CrossLinkApprovalViewProps {
   clusterId: string;
   crossLinkPlan: string;
+  readOnly?: boolean;
 }
 
-export default function CrossLinkApprovalView({ clusterId, crossLinkPlan }: CrossLinkApprovalViewProps) {
+export default function CrossLinkApprovalView({ clusterId, crossLinkPlan, readOnly = false }: CrossLinkApprovalViewProps) {
   const router = useRouter();
   const [approving, setApproving] = useState(false);
   const [error, setError] = useState("");
@@ -37,7 +38,7 @@ export default function CrossLinkApprovalView({ clusterId, crossLinkPlan }: Cros
 
   return (
     <div style={{ margin: "1rem 0" }}>
-      <h3>互链规划审阅</h3>
+      <h3>{readOnly ? "互链规划查看" : "互链规划审阅"}</h3>
       <pre style={{
         background: "#f9fafb",
         border: "1px solid #e5e7eb",
@@ -51,10 +52,14 @@ export default function CrossLinkApprovalView({ clusterId, crossLinkPlan }: Cros
       }}>
         {crossLinkPlan || "互链规划尚未生成"}
       </pre>
-      {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
-      <button className="btn primary" onClick={handleApprove} disabled={approving}>
-        {approving ? "审批中..." : "批准互链规划 →"}
-      </button>
+      {!readOnly && (
+        <>
+          {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
+          <button className="btn primary" onClick={handleApprove} disabled={approving}>
+            {approving ? "审批中..." : "批准互链规划 →"}
+          </button>
+        </>
+      )}
     </div>
   );
 }

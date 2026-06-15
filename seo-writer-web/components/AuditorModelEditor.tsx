@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { encodeProjectId } from "@/lib/routeParams";
-import { isTextProvider, providerLabels, textModelOptions } from "@/lib/modelCatalog";
+import { isTextProvider, providerLabels, textModelOptions, getDefaultBaseUrl } from "@/lib/modelCatalog";
 import type { Provider } from "@/lib/types";
 
 interface AuditorModelEditorProps {
@@ -39,6 +39,8 @@ export default function AuditorModelEditor({
     if (models && models.length > 0) {
       setModelName(models[0].value);
     }
+    // Update baseUrl to default for new provider
+    setBaseUrl(getDefaultBaseUrl(newProvider));
   }
 
   async function handleSave() {
@@ -67,6 +69,15 @@ export default function AuditorModelEditor({
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleCancel() {
+    setProvider(currentProvider);
+    setModelName(currentModelName);
+    setBaseUrl(currentBaseUrl);
+    setTemperature(String(currentTemperature));
+    setEditing(false);
+    setError("");
   }
 
   if (!editing) {
@@ -110,7 +121,7 @@ export default function AuditorModelEditor({
         <button type="button" className="btn-sm primary" onClick={handleSave} disabled={saving}>
           {saving ? "保存中..." : "保存"}
         </button>
-        <button type="button" className="btn-sm ghost" onClick={() => { setEditing(false); setError(""); }}>
+        <button type="button" className="btn-sm ghost" onClick={handleCancel}>
           取消
         </button>
       </div>

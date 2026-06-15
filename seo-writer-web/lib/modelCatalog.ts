@@ -69,3 +69,17 @@ export function resolveTextModel(provider: Provider, modelName: string): string 
     ? modelName
     : textModelOptions[provider][0].value;
 }
+
+export const defaultBaseUrlByProvider: Record<Provider, string> = {
+  openai: "",
+  anthropic: "",
+  deepseek: "https://api.deepseek.com/v1",
+  qwen: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+  doubao: "https://ark.cn-beijing.volces.com/api/v3",
+  xiaomi: "https://api.xiaomimimo.com/v1",
+  custom: ""
+};
+
+export function getDefaultBaseUrl(provider: Provider): string {
+  return defaultBaseUrlByProvider[provider] || "";
+}

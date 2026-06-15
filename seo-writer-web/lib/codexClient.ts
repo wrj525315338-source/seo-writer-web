@@ -117,10 +117,19 @@ function getRuntimeModelConfig(project: Project, role: ModelRole): RuntimeModelC
     return writingConfig;
   }
 
+  const auditorProvider = project.auditor_provider || writingConfig.provider;
+  const auditorBaseUrl = project.auditor_base_url;
+
+  // Only inherit writing baseUrl when auditor uses the same provider
+  // Otherwise, let the backend resolve the default URL for the auditor provider
+  const resolvedBaseUrl = auditorBaseUrl !== undefined && auditorBaseUrl !== null
+    ? auditorBaseUrl
+    : (auditorProvider === writingConfig.provider ? writingConfig.baseUrl : "");
+
   return {
-    provider: project.auditor_provider || writingConfig.provider,
+    provider: auditorProvider,
     modelName: project.auditor_model_name || writingConfig.modelName,
-    baseUrl: project.auditor_base_url || writingConfig.baseUrl,
+    baseUrl: resolvedBaseUrl,
     temperature: Number(project.auditor_temperature ?? 0.2)
   };
 }

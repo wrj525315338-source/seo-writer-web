@@ -2,39 +2,44 @@
 
 import { ChangeEvent, useEffect, useState } from "react";
 import { imageModelCatalog } from "@/lib/imageModelCatalog";
-import { isTextProvider, providerLabels, resolveTextModel, textModelOptions } from "@/lib/modelCatalog";
+import { isTextProvider, providerLabels, resolveTextModel, textModelOptions, getDefaultBaseUrl } from "@/lib/modelCatalog";
 import type { ImageProvider, Provider } from "@/lib/types";
 
 const imageModelOptions = imageModelCatalog;
 
-function storedValue(key: string): string {
+function storedValue(key: string): string | null {
   if (typeof window === "undefined") {
-    return "";
+    return null;
   }
-  return window.localStorage.getItem(key) || "";
+  return window.localStorage.getItem(key);
 }
 
 function storeValue(key: string, value: string): void {
   if (typeof window === "undefined") {
     return;
   }
-  window.localStorage.setItem(key, value);
+  try {
+    window.localStorage.setItem(key, value);
+  } catch (e) {
+    // localStorage may be disabled or full, silently ignore
+    console.warn("Failed to save to localStorage:", e);
+  }
 }
 
-function validProvider(value: string, fallback: Provider): Provider {
-  return isTextProvider(value) ? value : fallback;
+function validProvider(value: string | null, fallback: Provider): Provider {
+  return value && isTextProvider(value) ? value : fallback;
 }
 
-function validModel(provider: Provider, value: string): string {
-  return resolveTextModel(provider, value);
+function validModel(provider: Provider, value: string | null): string {
+  return value ? resolveTextModel(provider, value) : textModelOptions[provider][0].value;
 }
 
-function validImageProvider(value: string, fallback: ImageProvider): ImageProvider {
-  return Object.keys(imageModelOptions).includes(value) ? (value as ImageProvider) : fallback;
+function validImageProvider(value: string | null, fallback: ImageProvider): ImageProvider {
+  return value && Object.keys(imageModelOptions).includes(value) ? (value as ImageProvider) : fallback;
 }
 
-function validImageModel(provider: ImageProvider, value: string): string {
-  return imageModelOptions[provider].some((model) => model.value === value)
+function validImageModel(provider: ImageProvider, value: string | null): string {
+  return value && imageModelOptions[provider].some((model) => model.value === value)
     ? value
     : imageModelOptions[provider][0].value;
 }
@@ -56,23 +61,31 @@ function ModelSelector({
 }: ModelSelectorProps) {
   const providerStorageKey = `seo-writer:model:${prefix}:provider`;
   const modelStorageKey = `seo-writer:model:${prefix}:model`;
+  const baseUrlStorageKey = `seo-writer:model:${prefix}:baseUrl`;
   const [provider, setProvider] = useState<Provider>(defaultProvider);
   const [modelName, setModelName] = useState(textModelOptions[defaultProvider][0].value);
+  const [baseUrl, setBaseUrl] = useState(getDefaultBaseUrl(defaultProvider));
 
   useEffect(() => {
     const savedProvider = validProvider(storedValue(providerStorageKey), defaultProvider);
     const savedModel = validModel(savedProvider, storedValue(modelStorageKey));
+    const savedBaseUrl = storedValue(baseUrlStorageKey);
     setProvider(savedProvider);
     setModelName(savedModel);
-  }, [defaultProvider, modelStorageKey, providerStorageKey]);
+    // Use saved value if exists, otherwise use default for provider
+    setBaseUrl(savedBaseUrl !== null ? savedBaseUrl : getDefaultBaseUrl(savedProvider));
+  }, [defaultProvider, modelStorageKey, providerStorageKey, baseUrlStorageKey]);
 
   function handleProviderChange(event: ChangeEvent<HTMLSelectElement>) {
     const nextProvider = event.target.value as Provider;
     const nextModelName = textModelOptions[nextProvider][0].value;
+    const nextBaseUrl = getDefaultBaseUrl(nextProvider);
     setProvider(nextProvider);
     setModelName(nextModelName);
+    setBaseUrl(nextBaseUrl);
     storeValue(providerStorageKey, nextProvider);
     storeValue(modelStorageKey, nextModelName);
+    storeValue(baseUrlStorageKey, nextBaseUrl);
   }
 
   function handleModelChange(event: ChangeEvent<HTMLSelectElement>) {
@@ -116,7 +129,14 @@ function ModelSelector({
         </div>
         <div className="field">
           <label htmlFor={`${prefix}BaseUrl`}>Base URL</label>
-          <input id={`${prefix}BaseUrl`} name={`${prefix}BaseUrl`} placeholder="custom 或 OpenAI-compatible endpoint，可选" />
+          <input
+            id={`${prefix}BaseUrl`}
+            name={`${prefix}BaseUrl`}
+            value={baseUrl}
+            onChange={(e) => setBaseUrl(e.target.value)}
+            onBlur={() => storeValue(baseUrlStorageKey, baseUrl)}
+            placeholder="custom 或 OpenAI-compatible endpoint，可选"
+          />
         </div>
         <div className="field">
           <label htmlFor={`${prefix}Temperature`}>Temperature</label>

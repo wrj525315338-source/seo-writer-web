@@ -12,6 +12,7 @@ import MarkdownPreview from "@/components/MarkdownPreview";
 import OutputFileList from "@/components/OutputFileList";
 import ReviewCommentBox from "@/components/ReviewCommentBox";
 import WorkflowAutoRunner from "@/components/WorkflowAutoRunner";
+import AuditorModelEditor from "@/components/AuditorModelEditor";
 import ImageGenerationRecoveryPanel from "@/components/ImageGenerationRecoveryPanel";
 import ImageReviewPanel from "@/components/ImageReviewPanel";
 import Phase6StatusPanel from "@/components/Phase6StatusPanel";
@@ -102,7 +103,16 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
             </div>
             {(project.auditor_provider || project.writing_provider || project.provider) === (project.writing_provider || project.provider) &&
             (project.auditor_model_name || project.writing_model_name || project.model_name) === (project.writing_model_name || project.model_name) ? (
-              <div className="notice">当前审查模型与写作/批改模型相同，审核独立性较弱。</div>
+              <div className="notice">
+                <span>当前审查模型与写作/批改模型相同，审核独立性较弱。</span>
+                <AuditorModelEditor
+                  projectId={project.id}
+                  currentProvider={project.auditor_provider || project.writing_provider || project.provider}
+                  currentModelName={project.auditor_model_name || project.writing_model_name || project.model_name}
+                  currentBaseUrl={project.auditor_base_url || project.writing_base_url || project.base_url}
+                  currentTemperature={project.auditor_temperature ?? 0.2}
+                />
+              </div>
             ) : null}
             <div className="meta-row"><span>Checklist</span><span className={`status ${state.phases.phase4.status}`}>{state.phases.phase4.status}</span></div>
             <div className="meta-row"><span>状态</span><span>{project.status}</span></div>

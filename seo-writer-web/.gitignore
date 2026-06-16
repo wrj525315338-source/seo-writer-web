@@ -11,3 +11,6 @@ storage/shared/*
 
 __pycache__/
 *.pyc
+
+# Next.js generated
+next-env.d.ts

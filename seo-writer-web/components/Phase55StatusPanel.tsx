@@ -23,6 +23,7 @@ export default function Phase55StatusPanel({
   const [error, setError] = useState<string | null>(null);
 
   const isPlaceholderOnly = imagePlanningMode === "placeholder_only";
+  const isAuto = imagePlanningMode === "auto";
 
   const handleUpgrade = async () => {
     if (!confirm("确认要生成完整的图片规划吗？\n\n这将调用 AI 生成图片描述和 Prompt，预计消耗 2000-3000 Token。")) {
@@ -74,7 +75,9 @@ export default function Phase55StatusPanel({
         <div className="status-item">
           <span className="status-label">模式</span>
           <span className="status-value">
-            {isPlaceholderOnly ? (
+            {isAuto ? (
+              <span className="badge badge-info">自动</span>
+            ) : isPlaceholderOnly ? (
               <span className="badge badge-warning">仅占位符</span>
             ) : (
               <span className="badge badge-primary">完整规划</span>

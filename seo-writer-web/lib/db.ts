@@ -59,7 +59,7 @@ export function getDb(): DatabaseSync {
       image_insert_mode TEXT NOT NULL DEFAULT 'placeholder',
       image_count_default INTEGER NOT NULL DEFAULT 3,
       image_allow_non_compliant_images INTEGER NOT NULL DEFAULT 0,
-      image_planning_mode TEXT NOT NULL DEFAULT 'full_planning',
+      image_planning_mode TEXT NOT NULL DEFAULT 'auto',
       provider TEXT NOT NULL DEFAULT 'openai',
       model_name TEXT NOT NULL DEFAULT '',
       base_url TEXT NOT NULL DEFAULT '',
@@ -159,7 +159,7 @@ function ensureProjectColumns(database: DatabaseSync): void {
     ["image_insert_mode", "TEXT NOT NULL DEFAULT 'placeholder'"],
     ["image_count_default", "INTEGER NOT NULL DEFAULT 3"],
     ["image_allow_non_compliant_images", "INTEGER NOT NULL DEFAULT 0"],
-    ["image_planning_mode", "TEXT NOT NULL DEFAULT 'full_planning'"]
+    ["image_planning_mode", "TEXT NOT NULL DEFAULT 'auto'"]
   ];
   for (const [name, definition] of columns) {
     if (!existingColumns.has(name)) {
@@ -207,7 +207,8 @@ function ensureProjectColumns(database: DatabaseSync): void {
       image_retry_count = COALESCE(image_retry_count, 2),
       image_insert_mode = COALESCE(NULLIF(image_insert_mode, ''), 'placeholder'),
       image_count_default = COALESCE(image_count_default, 3),
-      image_allow_non_compliant_images = COALESCE(image_allow_non_compliant_images, 0)
+      image_allow_non_compliant_images = COALESCE(image_allow_non_compliant_images, 0),
+      image_planning_mode = COALESCE(NULLIF(image_planning_mode, ''), 'auto')
   `);
   database.exec(`
     UPDATE projects
@@ -285,7 +286,7 @@ export function createProject(project: Project): void {
       project.image_insert_mode,
       project.image_count_default,
       project.image_allow_non_compliant_images ? 1 : 0,
-      project.image_planning_mode || "full_planning",
+      project.image_planning_mode || "auto",
       project.provider,
       project.model_name,
       project.base_url,

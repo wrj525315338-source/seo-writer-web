@@ -9,7 +9,7 @@ import {
   getSharedWritingGuidelineFiles,
   replaceSharedUploads
 } from "@/lib/sharedFiles";
-import { Project } from "@/lib/types";
+import { ImagePlanningMode, Project } from "@/lib/types";
 import {
   asImageProvider,
   asProvider,
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     const imageInsertMode = optionalText(formData.get("imageInsertMode")) || "placeholder";
     const imageCountDefault = Number(optionalText(formData.get("imageCountDefault")) || 3);
     const imageAllowNonCompliantImages = formData.getAll("imageAllowNonCompliantImages").map(String).includes("true");
-    const imagePlanningMode = (optionalText(formData.get("imagePlanningMode")) || "full_planning") as "placeholder_only" | "full_planning";
+    const imagePlanningMode = (optionalText(formData.get("imagePlanningMode")) || "auto") as ImagePlanningMode;
     const secondaryKeywords = parseSecondaryKeywords(optionalText(formData.get("secondaryKeywords")));
     const imageRequirements = optionalText(formData.get("imageRequirements"));
     const extraNotes = optionalText(formData.get("extraNotes"));

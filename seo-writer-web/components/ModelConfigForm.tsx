@@ -202,11 +202,13 @@ function ImageGenerationModelConfig() {
       </label>
       <div className="field full">
         <label htmlFor="imagePlanningMode">Image planning mode</label>
-        <select id="imagePlanningMode" name="imagePlanningMode" defaultValue="full_planning">
+        <select id="imagePlanningMode" name="imagePlanningMode" defaultValue="auto">
+          <option value="auto">Auto - 自动选择（推荐）</option>
           <option value="placeholder_only">Placeholder only - 只生成占位符，不生成 Prompt（节省 Token）</option>
           <option value="full_planning">Full planning - 生成占位符 + 完整 Prompt + Description</option>
         </select>
         <span className="help">
+          Auto 模式会根据项目配置自动选择合适的规划方式。
           Placeholder only 模式下，Phase 5.5 只分析图片插入位置，不生成图片描述和 AI Prompt。
           后续可点击【补充完整规划】按钮升级为完整规划模式。
         </span>

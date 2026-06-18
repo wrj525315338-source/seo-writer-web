@@ -879,7 +879,7 @@ export async function upgradePhase55ToFullPlanning(projectId: string): Promise<v
   const project = requireProject(projectId);
 
   // Check current mode
-  const currentMode = project.image_planning_mode || "full_planning";
+  const currentMode = project.image_planning_mode || "auto";
   if (currentMode === "full_planning") {
     throw new Error("当前已是完整规划模式，无需升级。");
   }
@@ -995,7 +995,7 @@ export function setImageGenerationEnabled(projectId: string, enabled: boolean): 
 
 export async function startImageGeneration(projectId: string): Promise<void> {
   const project = requireProject(projectId);
-  const imagePlanningMode = project.image_planning_mode || "full_planning";
+  const imagePlanningMode = project.image_planning_mode || "auto";
   const configPath = writeImageGenerationConfig(project);
   const planPath = outputPath(projectId, "image_plan.json");
 
@@ -2163,9 +2163,10 @@ export async function approvePhase(projectId: string, phase: PhaseId): Promise<v
   assertPhaseCanApprove(state, phase);
   if (phase === "phase5") {
     const project = requireProject(projectId);
-    const imagePlanningMode = project.image_planning_mode || "full_planning";
+    const imagePlanningMode = project.image_planning_mode || "auto";
 
     // Choose Phase 5.5 execution based on mode
+    // "auto" and "full_planning" use the same behavior
     if (imagePlanningMode === "placeholder_only") {
       // Placeholder-only mode: analyze position only, no prompt generation
       try {
@@ -2183,7 +2184,7 @@ export async function approvePhase(projectId: string, phase: PhaseId): Promise<v
         );
       }
     } else {
-      // Full planning mode: current behavior
+      // Full planning mode (auto or full_planning): current behavior
       const configPath = writeImageGenerationConfig(project);
       try {
         await runPhase55ImagePlanning(project, configPath);

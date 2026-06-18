@@ -9,7 +9,7 @@ export type Provider = "openai" | "anthropic" | "deepseek" | "qwen" | "doubao" |
 export type ImageProvider = "openai_image" | "doubao" | "volcengine_ark" | "qwen" | "custom";
 
 /** Image planning mode determines Phase 5.5 behavior */
-export type ImagePlanningMode = "placeholder_only" | "full_planning";
+export type ImagePlanningMode = "auto" | "placeholder_only" | "full_planning";
 
 export interface ImageGenerationConfig {
   enabled: boolean;

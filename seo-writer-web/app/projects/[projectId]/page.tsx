@@ -170,7 +170,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
 
           <Phase55StatusPanel
             projectId={project.id}
-            imagePlanningMode={project.image_planning_mode || "full_planning"}
+            imagePlanningMode={project.image_planning_mode ?? "auto"}
             imageCount={Number(project.image_count_default || 3)}
             isCompleted={state.phases.phase5?.status === "approved"}
           />

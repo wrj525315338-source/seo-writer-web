@@ -18,6 +18,7 @@ import ImageGenerationRecoveryPanel from "@/components/ImageGenerationRecoveryPa
 import ImageReviewPanel from "@/components/ImageReviewPanel";
 import Phase6StatusPanel from "@/components/Phase6StatusPanel";
 import Phase55StatusPanel from "@/components/Phase55StatusPanel";
+import Phase5Polling from "@/components/Phase5Polling";
 
 interface ProjectDetailProps {
   params: Promise<{ projectId: string }>;
@@ -73,9 +74,11 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
   };
   const imageModelLabel = project.image_model_display_name || project.image_model_name || project.image_model_id || "未设置";
   const imageGenerationEnabled = Boolean(Number(project.enable_image_generation));
+  const isPhase5Processing = state.phases.phase5?.status === "processing";
 
   return (
     <main className="page">
+      <Phase5Polling isProcessing={isPhase5Processing} />
       <div className="page-header">
         <div>
           <h1 className="page-title">{project.name}</h1>
@@ -173,6 +176,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
             imagePlanningMode={project.image_planning_mode ?? "auto"}
             imageCount={Number(project.image_count_default || 3)}
             isCompleted={state.phases.phase5?.status === "approved"}
+            isProcessing={isPhase5Processing}
           />
 
           <Phase6StatusPanel projectId={project.id} status={phase6Status} />

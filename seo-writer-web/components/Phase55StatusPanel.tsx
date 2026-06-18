@@ -7,6 +7,7 @@ interface Phase55StatusPanelProps {
   imagePlanningMode: string;
   imageCount: number;
   isCompleted: boolean;
+  isProcessing?: boolean;
   onViewSlotsArticle?: () => void;
   onRefresh?: () => void;
 }
@@ -16,6 +17,7 @@ export default function Phase55StatusPanel({
   imagePlanningMode,
   imageCount,
   isCompleted,
+  isProcessing = false,
   onViewSlotsArticle,
   onRefresh
 }: Phase55StatusPanelProps) {
@@ -56,7 +58,7 @@ export default function Phase55StatusPanel({
     }
   };
 
-  if (!isCompleted) {
+  if (!isCompleted && !isProcessing) {
     return null;
   }
 
@@ -64,11 +66,29 @@ export default function Phase55StatusPanel({
     <div className="phase55-status-panel">
       <h3 className="panel-title">Phase 5.5 图片规划</h3>
 
+      {isProcessing && (
+        <div className="info-box info-box-info">
+          <p>
+            ⏳ Phase 5 正在后台处理中，包括：
+            <br />
+            • 图片规划生成
+            <br />
+            • Word 文件生成
+            <br />
+            您可以离开此页面，处理完成后状态会自动更新。
+          </p>
+        </div>
+      )}
+
       <div className="status-grid">
         <div className="status-item">
           <span className="status-label">状态</span>
           <span className="status-value">
-            <span className="badge badge-success">✅ 已完成</span>
+            {isProcessing ? (
+              <span className="badge badge-info">处理中...</span>
+            ) : (
+              <span className="badge badge-success">✅ 已完成</span>
+            )}
           </span>
         </div>
 
@@ -117,7 +137,7 @@ export default function Phase55StatusPanel({
           </button>
         )}
 
-        {isPlaceholderOnly && (
+        {isPlaceholderOnly && !isProcessing && (
           <button
             className="btn btn-primary"
             onClick={handleUpgrade}

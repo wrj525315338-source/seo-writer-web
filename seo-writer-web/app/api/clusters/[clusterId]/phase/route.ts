@@ -90,6 +90,8 @@ async function approvePhaseForAllArticles(
   const articles = listClusterArticles(clusterId);
   const { requiresManualReview } = await import("@/lib/validators");
 
+  let hasProcessingPhase5 = false;
+
   for (const article of articles) {
     try {
       const { readProjectState } = await import("@/lib/projectState");
@@ -98,6 +100,12 @@ async function approvePhaseForAllArticles(
 
       // Skip already-approved articles (idempotent)
       if (phaseState.approved) continue;
+
+      // Skip processing articles (Phase 5 background task)
+      if (phaseState.status === "processing") {
+        hasProcessingPhase5 = true;
+        continue;
+      }
 
       // For auto-approved phases, verify they completed successfully
       if (!requiresManualReview(articlePhase)) {
@@ -109,11 +117,23 @@ async function approvePhaseForAllArticles(
 
       // For manual-review phases, call approvePhase
       await approvePhase(article.project_id, articlePhase);
+
+      // Check if Phase 5 is now processing
+      if (articlePhase === "phase5") {
+        const updatedState = readProjectState(article.project_id);
+        if (updatedState.phases.phase5?.status === "processing") {
+          hasProcessingPhase5 = true;
+        }
+      }
     } catch (error) {
       return `${article.article_slug} ${articlePhase} 审批失败: ${sanitizeError(error)}`;
     }
   }
-  approveClusterPhase(clusterId, clusterPhase);
+
+  // Only advance cluster phase if no Phase 5 is still processing
+  if (!hasProcessingPhase5) {
+    approveClusterPhase(clusterId, clusterPhase);
+  }
   return null;
 }
 

@@ -1,6 +1,6 @@
 export type PhaseId = "phase0" | "phase1" | "phase2" | "phase3" | "phase4" | "phase5";
 
-export type PhaseStatus = "not_started" | "running" | "waiting_review" | "approved" | "failed";
+export type PhaseStatus = "not_started" | "running" | "processing" | "waiting_review" | "approved" | "failed";
 
 export type ProjectStatus = "active" | "completed" | "failed";
 

@@ -2161,51 +2161,85 @@ async function revisePhase5(project: Project, userComment: string): Promise<void
 export async function approvePhase(projectId: string, phase: PhaseId): Promise<void> {
   const state = readProjectState(projectId);
   assertPhaseCanApprove(state, phase);
-  if (phase === "phase5") {
-    const project = requireProject(projectId);
-    const imagePlanningMode = project.image_planning_mode || "auto";
 
-    // Choose Phase 5.5 execution based on mode
-    // "auto" and "full_planning" use the same behavior
-    if (imagePlanningMode === "placeholder_only") {
-      // Placeholder-only mode: analyze position only, no prompt generation
-      try {
-        await runPhase55PlaceholderOnly(project);
-      } catch (error) {
-        const message = sanitizeError(error);
-        fs.appendFileSync(
-          outputPath(projectId, "image_planning.log"),
-          [
-            `[${new Date().toISOString()}] phase5_5_placeholder_only failed`,
-            message,
-            ""
-          ].join("\n"),
-          "utf-8"
-        );
-      }
-    } else {
-      // Full planning mode (auto or full_planning): current behavior
-      const configPath = writeImageGenerationConfig(project);
-      try {
-        await runPhase55ImagePlanning(project, configPath);
-      } catch (error) {
-        const message = sanitizeError(error);
-        fs.appendFileSync(
-          outputPath(projectId, "image_planning.log"),
-          [
-            `[${new Date().toISOString()}] phase5_5_image_planning failed`,
-            message,
-            ""
-          ].join("\n"),
-          "utf-8"
-        );
-      }
-    }
-    await generateFinalDocx(project, true);
+  if (phase === "phase5") {
+    // 先更新状态为 "processing"
+    setPhaseStatus(projectId, phase, "processing");
+    updateProjectPhase(projectId, phase, "active");
+
+    // 在后台执行耗时操作
+    runPhase5Background(projectId).catch((error) => {
+      const message = sanitizeError(error);
+      fs.appendFileSync(
+        outputPath(projectId, "image_planning.log"),
+        [
+          `[${new Date().toISOString()}] Phase 5 background task failed`,
+          message,
+          ""
+        ].join("\n"),
+        "utf-8"
+      );
+      // 更新状态为 "failed"
+      setPhaseStatus(projectId, phase, "failed", message);
+      updateProjectPhase(projectId, phase, "failed");
+    });
+    return;
   }
+
+  // 其他 Phase 的处理（不包括 phase5，已经在上面处理）
   const nextState = approvePhaseInState(projectId, phase);
-  const nextStatus = phase === "phase5" ? "completed" : "active";
-  updateProjectPhase(projectId, nextState.currentPhase, nextStatus);
+  updateProjectPhase(projectId, nextState.currentPhase, "active");
+}
+
+/**
+ * Phase 5 后台任务：执行 Phase 5.5 和生成 Word 文件
+ */
+async function runPhase5Background(projectId: string): Promise<void> {
+  const project = requireProject(projectId);
+  const imagePlanningMode = project.image_planning_mode || "auto";
+
+  // Choose Phase 5.5 execution based on mode
+  // "auto" and "full_planning" use the same behavior
+  if (imagePlanningMode === "placeholder_only") {
+    // Placeholder-only mode: analyze position only, no prompt generation
+    try {
+      await runPhase55PlaceholderOnly(project);
+    } catch (error) {
+      const message = sanitizeError(error);
+      fs.appendFileSync(
+        outputPath(projectId, "image_planning.log"),
+        [
+          `[${new Date().toISOString()}] phase5_5_placeholder_only failed`,
+          message,
+          ""
+        ].join("\n"),
+        "utf-8"
+      );
+    }
+  } else {
+    // Full planning mode (auto or full_planning): current behavior
+    const configPath = writeImageGenerationConfig(project);
+    try {
+      await runPhase55ImagePlanning(project, configPath);
+    } catch (error) {
+      const message = sanitizeError(error);
+      fs.appendFileSync(
+        outputPath(projectId, "image_planning.log"),
+        [
+          `[${new Date().toISOString()}] phase5_5_image_planning failed`,
+          message,
+          ""
+        ].join("\n"),
+        "utf-8"
+      );
+    }
+  }
+
+  await generateFinalDocx(project, true);
+
+  // 更新状态为 "completed"
+  approvePhaseInState(projectId, "phase5");
+  updateProjectPhase(projectId, "phase5", "completed");
 }
 
 export function getReadableOutput(projectId: string, phase: PhaseId): string {

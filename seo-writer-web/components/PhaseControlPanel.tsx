@@ -86,6 +86,7 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
         {phases.map((phase) => {
           const phaseState = state.phases[phase];
           const isBusy = busyPhase === phase || phaseState.status === "running";
+          const isProcessing = phaseState.status === "processing";
           const showReviewControls = requiresManualReview(phase);
           const canConfirm = phaseState.status === "waiting_review";
           const showRerun = phaseState.status === "failed";
@@ -103,8 +104,15 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
                     <strong>{phase.toUpperCase()}</strong> {phaseLabels[phase]}
                   </span>
                 )}
-                <span className={`status ${phaseState.status}`}>{phaseState.status}</span>
+                <span className={`status ${phaseState.status}`}>
+                  {isProcessing ? "处理中..." : phaseState.status}
+                </span>
               </div>
+              {isProcessing && (
+                <div className="notice">
+                  ⏳ Phase 5 正在后台处理中，您可以离开此页面。处理完成后状态会自动更新。
+                </div>
+              )}
               {phaseState.errorMessage ? <div className="error">{phaseState.errorMessage}</div> : null}
               {showRerun || showConfirm ? (
                 <div className="phase-actions">
@@ -189,9 +197,9 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
                     )
                   ) : null}
                   {showConfirm ? (
-                    <button type="button" className="primary" onClick={() => submit("approve", phase)} disabled={isBusy || !canConfirm}>
+                    <button type="button" className="primary" onClick={() => submit("approve", phase)} disabled={isBusy || isProcessing || !canConfirm}>
                       <Check size={15} />
-                      {busyPhase === phase ? "处理中..." : "确认通过"}
+                      {isProcessing ? "处理中..." : busyPhase === phase ? "处理中..." : "确认通过"}
                     </button>
                   ) : null}
                 </div>

@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
     const imageInsertMode = optionalText(formData.get("imageInsertMode")) || "placeholder";
     const imageCountDefault = Number(optionalText(formData.get("imageCountDefault")) || 3);
     const imageAllowNonCompliantImages = formData.getAll("imageAllowNonCompliantImages").map(String).includes("true");
+    const imagePlanningMode = (optionalText(formData.get("imagePlanningMode")) || "full_planning") as "placeholder_only" | "full_planning";
     const secondaryKeywords = parseSecondaryKeywords(optionalText(formData.get("secondaryKeywords")));
     const imageRequirements = optionalText(formData.get("imageRequirements"));
     const extraNotes = optionalText(formData.get("extraNotes"));
@@ -165,6 +166,7 @@ export async function POST(request: NextRequest) {
       image_insert_mode: imageInsertMode,
       image_count_default: Number.isFinite(imageCountDefault) ? imageCountDefault : 3,
       image_allow_non_compliant_images: imageAllowNonCompliantImages,
+      image_planning_mode: imagePlanningMode,
       provider: writingProvider,
       model_name: writingModelName,
       base_url: writingBaseUrl,

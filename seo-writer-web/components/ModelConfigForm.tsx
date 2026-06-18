@@ -200,6 +200,17 @@ function ImageGenerationModelConfig() {
         <span>Enable image generation</span>
         <input type="checkbox" name="enableImageGeneration" value="true" defaultChecked />
       </label>
+      <div className="field full">
+        <label htmlFor="imagePlanningMode">Image planning mode</label>
+        <select id="imagePlanningMode" name="imagePlanningMode" defaultValue="full_planning">
+          <option value="placeholder_only">Placeholder only - 只生成占位符，不生成 Prompt（节省 Token）</option>
+          <option value="full_planning">Full planning - 生成占位符 + 完整 Prompt + Description</option>
+        </select>
+        <span className="help">
+          Placeholder only 模式下，Phase 5.5 只分析图片插入位置，不生成图片描述和 AI Prompt。
+          后续可点击【补充完整规划】按钮升级为完整规划模式。
+        </span>
+      </div>
       <div className="form-grid">
         <div className="field">
           <label htmlFor="imageProvider">Provider</label>

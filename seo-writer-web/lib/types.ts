@@ -8,6 +8,9 @@ export type Provider = "openai" | "anthropic" | "deepseek" | "qwen" | "doubao" |
 
 export type ImageProvider = "openai_image" | "doubao" | "volcengine_ark" | "qwen" | "custom";
 
+/** Image planning mode determines Phase 5.5 behavior */
+export type ImagePlanningMode = "placeholder_only" | "full_planning";
+
 export interface ImageGenerationConfig {
   enabled: boolean;
   provider: ImageProvider;
@@ -66,6 +69,7 @@ export interface Project {
   image_insert_mode: string;
   image_count_default: number;
   image_allow_non_compliant_images: boolean;
+  image_planning_mode: ImagePlanningMode;
   /** Legacy alias for writing_provider. */
   provider: Provider;
   /** Legacy alias for writing_model_name. */
@@ -295,6 +299,7 @@ export interface ProjectFormData {
   imageInsertMode: string;
   imageCountDefault: number;
   imageAllowNonCompliantImages: boolean;
+  imagePlanningMode: ImagePlanningMode;
   topic: string;
   primaryKeyword: string;
   secondaryKeywords: string[];

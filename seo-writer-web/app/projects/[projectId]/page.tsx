@@ -17,6 +17,7 @@ import AuditorModelEditor from "@/components/AuditorModelEditor";
 import ImageGenerationRecoveryPanel from "@/components/ImageGenerationRecoveryPanel";
 import ImageReviewPanel from "@/components/ImageReviewPanel";
 import Phase6StatusPanel from "@/components/Phase6StatusPanel";
+import Phase55StatusPanel from "@/components/Phase55StatusPanel";
 
 interface ProjectDetailProps {
   params: Promise<{ projectId: string }>;
@@ -166,6 +167,13 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
 
         <section className="grid">
           <WorkflowAutoRunner projectId={project.id} state={state} projectStatus={project.status} />
+
+          <Phase55StatusPanel
+            projectId={project.id}
+            imagePlanningMode={project.image_planning_mode || "full_planning"}
+            imageCount={Number(project.image_count_default || 3)}
+            isCompleted={state.phases.phase5?.status === "approved"}
+          />
 
           <Phase6StatusPanel projectId={project.id} status={phase6Status} />
 

@@ -59,6 +59,7 @@ export function getDb(): DatabaseSync {
       image_insert_mode TEXT NOT NULL DEFAULT 'placeholder',
       image_count_default INTEGER NOT NULL DEFAULT 3,
       image_allow_non_compliant_images INTEGER NOT NULL DEFAULT 0,
+      image_planning_mode TEXT NOT NULL DEFAULT 'full_planning',
       provider TEXT NOT NULL DEFAULT 'openai',
       model_name TEXT NOT NULL DEFAULT '',
       base_url TEXT NOT NULL DEFAULT '',
@@ -157,7 +158,8 @@ function ensureProjectColumns(database: DatabaseSync): void {
     ["image_retry_count", "INTEGER NOT NULL DEFAULT 2"],
     ["image_insert_mode", "TEXT NOT NULL DEFAULT 'placeholder'"],
     ["image_count_default", "INTEGER NOT NULL DEFAULT 3"],
-    ["image_allow_non_compliant_images", "INTEGER NOT NULL DEFAULT 0"]
+    ["image_allow_non_compliant_images", "INTEGER NOT NULL DEFAULT 0"],
+    ["image_planning_mode", "TEXT NOT NULL DEFAULT 'full_planning'"]
   ];
   for (const [name, definition] of columns) {
     if (!existingColumns.has(name)) {
@@ -239,9 +241,10 @@ export function createProject(project: Project): void {
         auditor_provider, auditor_model_name, auditor_base_url, auditor_temperature, auditor_max_tokens,
         enable_image_generation, image_provider, image_model_display_name, image_model_name, image_model_id, image_endpoint_id, image_use_endpoint_id, image_base_url, image_temperature,
         image_skill_path, image_output_format, image_aspect_ratio_default, image_retry_count, image_insert_mode, image_count_default, image_allow_non_compliant_images,
+        image_planning_mode,
         provider, model_name, base_url, temperature,
         max_tokens, current_phase, status, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
     .run(
       project.id,
@@ -282,6 +285,7 @@ export function createProject(project: Project): void {
       project.image_insert_mode,
       project.image_count_default,
       project.image_allow_non_compliant_images ? 1 : 0,
+      project.image_planning_mode || "full_planning",
       project.provider,
       project.model_name,
       project.base_url,

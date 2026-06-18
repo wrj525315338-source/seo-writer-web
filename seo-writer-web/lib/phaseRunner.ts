@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   createPhaseRun,
   createReviewComment,
+  getDb,
   getProject,
   updatePhaseRun,
   updateProjectAuditorModelConfig,
@@ -40,7 +41,7 @@ import {
 } from "@/lib/imageReview";
 import { getSkillDir, runPythonScript, runSkillPrompt, buildImageEnv, buildModelEnv } from "@/lib/codexClient";
 import { resolveTextModel } from "@/lib/modelCatalog";
-import { ImageProvider, PhaseId, Project, Provider } from "@/lib/types";
+import { ImageProvider, ImagePlanningMode, PhaseId, Project, Provider } from "@/lib/types";
 import {
   assertPhaseCanApprove,
   assertPhaseCanRun,
@@ -50,6 +51,29 @@ import {
   resolveImageModelSelection,
   sanitizeError
 } from "@/lib/validators";
+
+/**
+ * Simple logging utility for Phase 5.5 image planning
+ */
+class PlanningLog {
+  private path: string;
+  private lines: string[] = [];
+
+  constructor(logPath: string) {
+    this.path = logPath;
+  }
+
+  write(message: string): void {
+    const timestamp = new Date().toISOString();
+    this.lines.push(`[${timestamp}] ${message}`);
+  }
+
+  save(): void {
+    const dir = path.dirname(this.path);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(this.path, this.lines.join("\n") + "\n", "utf-8");
+  }
+}
 
 const promptFiles: Record<PhaseId, string> = {
   phase0: "phase0_read_materials.md",
@@ -586,6 +610,296 @@ async function runPhase55ImagePlanning(project: Project, configPath: string): Pr
   ensureOutputExists(outputPath(project.id, "final_article_with_image_slots.md"));
 }
 
+/**
+ * Extract H2 section headings from article markdown
+ */
+function extractH2Sections(article: string): string[] {
+  const sections: string[] = [];
+  const lines = article.split("\n");
+  for (const line of lines) {
+    const match = line.match(/^##\s+(.+)$/);
+    if (match) {
+      sections.push(match[1].trim());
+    }
+  }
+  return sections;
+}
+
+/**
+ * Parse position analysis result from AI output
+ */
+function parsePositionPlan(rawPlanPath: string): { images: Array<{
+  id: string;
+  insert_before_heading: string;
+  insert_after_text: string;
+  reason: string;
+}> } {
+  const raw = fs.readFileSync(rawPlanPath, "utf-8");
+
+  // Try to extract JSON from fenced code block first
+  const fencedMatch = raw.match(/```json\s*([\s\S]*?)```/);
+  if (fencedMatch) {
+    return JSON.parse(fencedMatch[1]);
+  }
+
+  // For raw JSON, find the first { and last } to get the complete object
+  const firstBrace = raw.indexOf("{");
+  const lastBrace = raw.lastIndexOf("}");
+  if (firstBrace < 0 || lastBrace <= firstBrace) {
+    throw new Error(`无法解析位置分析结果: ${rawPlanPath}`);
+  }
+
+  const jsonStr = raw.slice(firstBrace, lastBrace + 1);
+  return JSON.parse(jsonStr);
+}
+
+/**
+ * Escape special characters for use in regular expression
+ */
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Insert image placeholders into article based on position analysis
+ */
+function insertPlaceholdersByPosition(
+  article: string,
+  images: Array<{ id: string; insert_before_heading: string; insert_after_text: string }>
+): string {
+  let result = article;
+  const unmatchedImages: typeof images = [];
+
+  // Insert anchored images from back to front to avoid position offset issues
+  const reversedImages = [...images].reverse();
+  for (const image of reversedImages) {
+    const marker = `[${image.id}]`;
+    let inserted = false;
+
+    if (image.insert_before_heading) {
+      // Insert before specified H2 heading
+      const headingRegex = new RegExp(`^(##\\s+${escapeRegExp(image.insert_before_heading)})`, "m");
+      const match = result.match(headingRegex);
+      if (match) {
+        result = result.replace(headingRegex, (_, heading) => `${marker}\n\n${heading}`);
+        inserted = true;
+      }
+    }
+
+    if (!inserted && image.insert_after_text) {
+      // Insert after specified text
+      const escapedText = escapeRegExp(image.insert_after_text);
+      const textRegex = new RegExp(`(${escapedText})`);
+      const match = result.match(textRegex);
+      if (match) {
+        result = result.replace(textRegex, (matched) => `${matched}\n\n${marker}`);
+        inserted = true;
+      }
+    }
+
+    if (!inserted) {
+      unmatchedImages.push(image);
+    }
+  }
+
+  // Append unmatched images in order at the end of the article (preserve original order)
+  const sortedUnmatched = [...unmatchedImages].sort((a, b) => {
+    const numA = parseInt(a.id.replace("IMAGE_", ""), 10);
+    const numB = parseInt(b.id.replace("IMAGE_", ""), 10);
+    return numA - numB;
+  });
+
+  for (const image of sortedUnmatched) {
+    const marker = `[${image.id}]`;
+    result = result.trim() + `\n\n${marker}\n`;
+  }
+
+  return result;
+}
+
+/**
+ * Clear Phase 5.5 output files
+ */
+function clearPhase55Outputs(projectId: string): void {
+  const outputsDir = getOutputsDir(projectId);
+  const filesToDelete = [
+    "image_plan.json",
+    "final_article_with_image_slots.md",
+    "image_planning.log",
+    "image_planning_project_config.json",
+    "image_style_reference_examples.md",
+    "image_generation_config.json",
+    "position_plan_raw.md"
+  ];
+
+  for (const file of filesToDelete) {
+    const filePath = path.join(outputsDir, file);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+  }
+}
+
+/**
+ * Update project's image planning mode in database
+ */
+function updateProjectImagePlanningMode(projectId: string, mode: ImagePlanningMode): void {
+  getDb().prepare("UPDATE projects SET image_planning_mode = ?, updated_at = ? WHERE id = ?")
+    .run(mode, new Date().toISOString(), projectId);
+}
+
+/**
+ * Phase 5.5 placeholder-only mode: analyze position only, no prompt generation
+ */
+async function runPhase55PlaceholderOnly(project: Project): Promise<void> {
+  const outputsDir = getOutputsDir(project.id);
+  const articleMd = outputPath(project.id, "03_full_article.md");
+  const rawPositionPlan = outputPath(project.id, "position_plan_raw.md");
+  const slotsPath = outputPath(project.id, "final_article_with_image_slots.md");
+  const imagePlanPath = outputPath(project.id, "image_plan.json");
+  const logPath = outputPath(project.id, "image_planning.log");
+
+  const article = fs.readFileSync(articleMd, "utf-8");
+  const imageCount = Number(project.image_count_default ?? 3);
+
+  // Get deferred image requirements from project state
+  const state = readProjectState(project.id);
+  const imageRequirements = state.inputs.articleBrief.imageRequirements || "";
+
+  const log = new PlanningLog(logPath);
+  log.write("Phase 5.5 placeholder-only mode started");
+  log.write(`Target image count: ${imageCount}`);
+  if (imageRequirements) {
+    log.write(`Image requirements: ${imageRequirements}`);
+  }
+
+  try {
+    // 1. Prepare prompt with image count and requirements
+    const promptTemplate = fs.readFileSync(
+      skillPath("prompts", "phase5_5_position_analysis_only.md"),
+      "utf-8"
+    );
+    let promptContent = promptTemplate.replace(/\{\{IMAGE_COUNT\}\}/g, String(imageCount));
+
+    // Include image requirements if available
+    const requirementsSection = imageRequirements
+      ? `## Special Image Requirements\n\n${imageRequirements}\n`
+      : "";
+    promptContent = promptContent.replace(/\{\{IMAGE_REQUIREMENTS\}\}/g, requirementsSection);
+
+    const tempPromptPath = outputPath(project.id, "temp_position_prompt.md");
+    fs.writeFileSync(tempPromptPath, promptContent, "utf-8");
+
+    // 2. Call AI to analyze insertion positions (consumes less tokens)
+    log.write("Running position analysis...");
+    await runSkillPrompt(
+      project,
+      [
+        skillPath("scripts", "run_prompt.py"),
+        "--prompt", tempPromptPath,
+        "--input", skillPath("SKILL.md"),
+        "--input", skillPath("workflow.md"),
+        "--input", articleMd,
+        "--output", rawPositionPlan
+      ],
+      "writing"
+    );
+
+    // Clean up temp prompt
+    if (fs.existsSync(tempPromptPath)) {
+      fs.unlinkSync(tempPromptPath);
+    }
+
+    // 3. Parse position information
+    log.write("Parsing position plan...");
+    const positionPlan = parsePositionPlan(rawPositionPlan);
+
+    // 4. Generate simplified image_plan.json (with positions, without prompt)
+    const images = positionPlan.images.slice(0, imageCount).map((img, index) => ({
+      id: `IMAGE_${index + 1}`,
+      insertion_marker: `[IMAGE_${index + 1}]`,
+      insert_before_heading: img.insert_before_heading || "",
+      insert_after_text: img.insert_after_text || "",
+      prompt: "",
+      alt_text: "",
+      description: "",
+      reason: img.reason || ""
+    }));
+
+    // Supplement if AI returned fewer images than needed
+    while (images.length < imageCount) {
+      const index = images.length;
+      images.push({
+        id: `IMAGE_${index + 1}`,
+        insertion_marker: `[IMAGE_${index + 1}]`,
+        insert_before_heading: "",
+        insert_after_text: "",
+        prompt: "",
+        alt_text: "",
+        description: "",
+        reason: "Auto-generated placeholder"
+      });
+    }
+
+    const plan = {
+      article_summary: {
+        article_type: "SEO",
+        h2_sections: extractH2Sections(article),
+        actual_word_count: article.split(/\s+/).length
+      },
+      images,
+      policy_check: {
+        ready_for_generation: false,
+        placeholder_only_mode: true,
+        total_images_allowed: true
+      }
+    };
+
+    fs.writeFileSync(imagePlanPath, JSON.stringify(plan, null, 2), "utf-8");
+    log.write(`Generated image_plan.json with ${images.length} placeholders`);
+
+    // 5. Insert placeholders into article based on position analysis
+    log.write("Inserting placeholders into article...");
+    const articleWithSlots = insertPlaceholdersByPosition(article, images);
+    fs.writeFileSync(slotsPath, articleWithSlots, "utf-8");
+
+    log.write("Phase 5.5 placeholder-only mode completed");
+  } catch (error) {
+    log.write(`Phase 5.5 placeholder-only mode failed: ${error}`);
+    throw error;
+  } finally {
+    log.save();
+  }
+}
+
+/**
+ * Upgrade placeholder_only to full_planning and re-run Phase 5.5
+ */
+export async function upgradePhase55ToFullPlanning(projectId: string): Promise<void> {
+  const project = requireProject(projectId);
+
+  // Check current mode
+  const currentMode = project.image_planning_mode || "full_planning";
+  if (currentMode === "full_planning") {
+    throw new Error("当前已是完整规划模式，无需升级。");
+  }
+
+  // 1. Clear old simplified files first
+  clearPhase55Outputs(projectId);
+
+  // 2. Re-run full Phase 5.5
+  const updatedProject = requireProject(projectId);
+  const configPath = writeImageGenerationConfig(updatedProject);
+  await runPhase55ImagePlanning(updatedProject, configPath);
+
+  // 3. Update mode to full_planning only after successful planning
+  updateProjectImagePlanningMode(projectId, "full_planning");
+
+  // 4. Regenerate Word output with the updated plan
+  const finalProject = requireProject(projectId);
+  await generateFinalDocx(finalProject, true);
+}
+
 async function runPhase6ImageOutput(
   project: Project,
   options: {
@@ -681,11 +995,20 @@ export function setImageGenerationEnabled(projectId: string, enabled: boolean): 
 
 export async function startImageGeneration(projectId: string): Promise<void> {
   const project = requireProject(projectId);
+  const imagePlanningMode = project.image_planning_mode || "full_planning";
   const configPath = writeImageGenerationConfig(project);
   const planPath = outputPath(projectId, "image_plan.json");
+
+  // Always check mode first - block placeholder_only mode from generating images
+  if (imagePlanningMode === "placeholder_only") {
+    throw new Error("当前为仅占位符模式，请先点击【补充完整规划】按钮生成完整的图片描述和 Prompt。");
+  }
+
+  // If plan doesn't exist, generate it (only for full_planning mode)
   if (!fs.existsSync(planPath)) {
     await runPhase55ImagePlanning(project, configPath);
   }
+
   if (!Boolean(Number(project.enable_image_generation))) {
     setImageGenerationEnabled(projectId, true);
   }
@@ -1840,20 +2163,42 @@ export async function approvePhase(projectId: string, phase: PhaseId): Promise<v
   assertPhaseCanApprove(state, phase);
   if (phase === "phase5") {
     const project = requireProject(projectId);
-    const configPath = writeImageGenerationConfig(project);
-    try {
-      await runPhase55ImagePlanning(project, configPath);
-    } catch (error) {
-      const message = sanitizeError(error);
-      fs.appendFileSync(
-        outputPath(projectId, "image_planning.log"),
-        [
-          `[${new Date().toISOString()}] phase5_5_image_planning failed`,
-          message,
-          ""
-        ].join("\n"),
-        "utf-8"
-      );
+    const imagePlanningMode = project.image_planning_mode || "full_planning";
+
+    // Choose Phase 5.5 execution based on mode
+    if (imagePlanningMode === "placeholder_only") {
+      // Placeholder-only mode: analyze position only, no prompt generation
+      try {
+        await runPhase55PlaceholderOnly(project);
+      } catch (error) {
+        const message = sanitizeError(error);
+        fs.appendFileSync(
+          outputPath(projectId, "image_planning.log"),
+          [
+            `[${new Date().toISOString()}] phase5_5_placeholder_only failed`,
+            message,
+            ""
+          ].join("\n"),
+          "utf-8"
+        );
+      }
+    } else {
+      // Full planning mode: current behavior
+      const configPath = writeImageGenerationConfig(project);
+      try {
+        await runPhase55ImagePlanning(project, configPath);
+      } catch (error) {
+        const message = sanitizeError(error);
+        fs.appendFileSync(
+          outputPath(projectId, "image_planning.log"),
+          [
+            `[${new Date().toISOString()}] phase5_5_image_planning failed`,
+            message,
+            ""
+          ].join("\n"),
+          "utf-8"
+        );
+      }
     }
     await generateFinalDocx(project, true);
   }

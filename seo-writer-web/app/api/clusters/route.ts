@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
     const auditorModelName = body.auditorModelName || writingModelName;
     const auditorBaseUrl = body.auditorBaseUrl || writingBaseUrl;
     const auditorTemperature = body.auditorTemperature ?? 0.2;
+    const imagePlanningMode = body.imagePlanningMode || "full_planning";
 
     if (!writingModelName) {
       return NextResponse.json({ error: "请提供写作模型名称。" }, { status: 400 });
@@ -248,6 +249,7 @@ export async function POST(request: NextRequest) {
         image_insert_mode: "placeholder",
         image_count_default: 3,
         image_allow_non_compliant_images: false,
+        image_planning_mode: imagePlanningMode as "placeholder_only" | "full_planning",
         provider: writingProvider,
         model_name: writingModelName,
         base_url: writingBaseUrl,

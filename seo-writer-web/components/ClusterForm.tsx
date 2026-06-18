@@ -16,6 +16,7 @@ interface ModelConfig {
   auditorModelName: string;
   auditorBaseUrl: string;
   auditorTemperature: number;
+  imagePlanningMode: "placeholder_only" | "full_planning";
 }
 
 interface ClusterFormProps {
@@ -37,9 +38,11 @@ function extractModelConfig(form: HTMLFormElement): ModelConfig {
   const am = String(fd.get("auditorModelName") || wm);
   const ab = String(fd.get("auditorBaseUrl") || wb);
   const at = Number(fd.get("auditorTemperature") || 0.2);
+  const ipm = String(fd.get("imagePlanningMode") || "full_planning");
   return {
     writingProvider: wp, writingModelName: wm, writingBaseUrl: wb, writingTemperature: wt,
     auditorProvider: ap, auditorModelName: am, auditorBaseUrl: ab, auditorTemperature: at,
+    imagePlanningMode: ipm as "placeholder_only" | "full_planning",
   };
 }
 

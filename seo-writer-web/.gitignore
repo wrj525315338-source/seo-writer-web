@@ -8,6 +8,8 @@ storage/projects/*
 !storage/projects/.gitkeep
 storage/shared/*
 !storage/shared/.gitkeep
+storage/clusters/*
+storage/products/*
 
 __pycache__/
 *.pyc

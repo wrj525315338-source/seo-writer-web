@@ -65,11 +65,11 @@ export default function DashboardPage() {
               </div>
               <div className="meta-row">
                 <span>创建</span>
-                <span>{new Date(project.created_at).toLocaleString()}</span>
+                <span>{new Date(project.created_at).toLocaleString("zh-CN", { hour12: false })}</span>
               </div>
               <div className="meta-row">
                 <span>更新</span>
-                <span>{new Date(project.updated_at).toLocaleString()}</span>
+                <span>{new Date(project.updated_at).toLocaleString("zh-CN", { hour12: false })}</span>
               </div>
             </a>
           ))}

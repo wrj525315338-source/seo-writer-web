@@ -118,7 +118,7 @@ export default function ProjectBulkManager({ projects }: ProjectBulkManagerProps
                   </span>
                   <span className="meta-row">
                     <span>更新</span>
-                    <span>{new Date(project.updated_at).toLocaleString()}</span>
+                    <span>{new Date(project.updated_at).toLocaleString("zh-CN", { hour12: false })}</span>
                   </span>
                 </span>
               </label>

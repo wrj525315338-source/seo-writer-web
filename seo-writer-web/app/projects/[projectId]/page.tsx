@@ -224,7 +224,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                   <div className="feedback-note" key={comment.id}>
                     <strong>{comment.phase}</strong>
                     <p style={{ margin: "4px 0" }}>{comment.comment}</p>
-                    <small>{new Date(comment.created_at).toLocaleString()}</small>
+                    <small>{new Date(comment.created_at).toLocaleString("zh-CN", { hour12: false })}</small>
                   </div>
                 ))}
               </div>

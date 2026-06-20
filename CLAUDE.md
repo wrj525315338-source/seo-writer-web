@@ -25,6 +25,7 @@
 - Each new feature must use a branch named feature/xxx.
 - Prefer git worktree for larger or risky tasks.
 - Commit only after tests or build pass.
+- Never run `git push` automatically. Always wait for the user to explicitly request it or push manually.
 
 ## Recommended Commands
 

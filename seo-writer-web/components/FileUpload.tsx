@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Button from "@/components/ui/Button";
 
 interface FileUploadProps {
   name: string;
@@ -9,7 +10,7 @@ interface FileUploadProps {
   required?: boolean;
   accept?: string;
   help?: string;
-  currentFiles?: string[];  // Currently saved file names
+  currentFiles?: string[];
 }
 
 export default function FileUpload({ name, label, multiple, required, accept, help, currentFiles }: FileUploadProps) {
@@ -30,7 +31,6 @@ export default function FileUpload({ name, label, multiple, required, accept, he
   function handleReplace() {
     setShowUpload(true);
     setSelectedName("");
-    // Focus the file input after render
     setTimeout(() => inputRef.current?.click(), 50);
   }
 
@@ -54,9 +54,9 @@ export default function FileUpload({ name, label, multiple, required, accept, he
             <span className="current-file-badge">已保存</span>
           </div>
           <div className="current-file-actions">
-            <button type="button" className="btn-sm" onClick={handleReplace}>
+            <Button size="sm" type="button" onClick={handleReplace}>
               更换文件
-            </button>
+            </Button>
           </div>
           <input type="hidden" name={name} value="" />
         </div>
@@ -75,9 +75,9 @@ export default function FileUpload({ name, label, multiple, required, accept, he
             onChange={handleChange}
           />
           {hasCurrentFiles && showUpload && (
-            <button type="button" className="btn-sm ghost" onClick={handleCancel}>
+            <Button size="sm" variant="ghost" type="button" onClick={handleCancel}>
               取消更换
-            </button>
+            </Button>
           )}
           {selectedName && (
             <span className="help">已选择：{selectedName}</span>
@@ -86,60 +86,6 @@ export default function FileUpload({ name, label, multiple, required, accept, he
       )}
 
       {help ? <span className="help">{help}</span> : null}
-
-      <style jsx>{`
-        .current-file-display {
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 0.5rem 0.75rem;
-          background: #f0fdf4;
-          border: 1px solid #bbf7d0;
-          border-radius: 6px;
-          margin-bottom: 0.25rem;
-        }
-        .current-file-info {
-          display: flex;
-          align-items: center;
-          gap: 0.4rem;
-          flex: 1;
-          min-width: 0;
-        }
-        .current-file-icon { font-size: 1.1rem; }
-        .current-file-name {
-          font-size: 0.85rem;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .current-file-badge {
-          font-size: 0.7rem;
-          padding: 0.1rem 0.4rem;
-          background: #dcfce7;
-          color: #166534;
-          border-radius: 3px;
-          white-space: nowrap;
-        }
-        .current-file-actions { white-space: nowrap; }
-        .btn-sm {
-          padding: 0.2rem 0.5rem;
-          font-size: 0.8rem;
-          border: 1px solid #d1d5db;
-          border-radius: 4px;
-          background: white;
-          cursor: pointer;
-          color: #374151;
-        }
-        .btn-sm:hover { background: #f9fafb; }
-        .btn-sm.ghost { border: none; color: #6b7280; }
-        .btn-sm.ghost:hover { color: #1f2937; }
-        .upload-input-row {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-          flex-wrap: wrap;
-        }
-      `}</style>
     </div>
   );
 }

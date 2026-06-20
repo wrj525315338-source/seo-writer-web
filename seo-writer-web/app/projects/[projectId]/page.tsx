@@ -8,6 +8,11 @@ import { readProjectState } from "@/lib/projectState";
 import { decodeProjectId, encodeProjectId } from "@/lib/routeParams";
 import { PhaseId } from "@/lib/types";
 import { phases, phaseLabels, requiresManualReview } from "@/lib/validators";
+import PageShell from "@/components/ui/PageShell";
+import PageTitle from "@/components/ui/PageTitle";
+import Card from "@/components/ui/Card";
+import Badge, { getStatusVariant } from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 import PhaseControlPanel from "@/components/PhaseControlPanel";
 import MarkdownPreview from "@/components/MarkdownPreview";
 import OutputFileList from "@/components/OutputFileList";
@@ -30,15 +35,15 @@ export const runtime = "nodejs";
 
 function ProjectNotFound() {
   return (
-    <main className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Project not found</h1>
-          <p className="page-subtitle">请返回项目列表重新选择项目。</p>
-        </div>
-        <a className="button ghost" href="/projects">返回项目列表</a>
-      </div>
-    </main>
+    <PageShell>
+      <PageTitle
+        title="Project not found"
+        subtitle="请返回项目列表重新选择项目。"
+        actions={
+          <a className="btn btn-ghost" href="/projects">返回项目列表</a>
+        }
+      />
+    </PageShell>
   );
 }
 
@@ -77,23 +82,23 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
   const isPhase5Processing = state.phases.phase5?.status === "processing";
 
   return (
-    <main className="page">
+    <PageShell>
       <Phase5Polling isProcessing={isPhase5Processing} />
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">{project.name}</h1>
-          <p className="page-subtitle">{project.article_title || project.topic}</p>
-        </div>
-        <a className="button ghost" href="/projects">返回项目列表</a>
-      </div>
+      <PageTitle
+        title={project.name}
+        subtitle={project.article_title || project.topic}
+        actions={
+          <a className="btn btn-ghost" href="/projects">返回项目列表</a>
+        }
+      />
 
       {cluster && (
         <div style={{
           marginBottom: "1rem",
           padding: "0.5rem 0.75rem",
-          background: "#eff6ff",
-          border: "1px solid #bfdbfe",
-          borderRadius: "6px",
+          background: "var(--color-info-bg)",
+          border: "1px solid var(--color-info-text)",
+          borderRadius: "var(--radius-sm)",
           display: "flex",
           alignItems: "center",
           gap: "0.5rem",
@@ -102,7 +107,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
           <Link
             href={`/clusters/${cluster.id}`}
             style={{
-              color: "#1d4ed8",
+              color: "var(--color-brand)",
               textDecoration: "none",
               fontWeight: 500,
             }}
@@ -114,8 +119,7 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
 
       <section className="detail-layout">
         <aside className="grid">
-          <div className="panel">
-            <h2>项目信息</h2>
+          <Card title="项目信息">
             <div className="meta-row"><span>当前 Phase</span><strong>{phaseLabels[state.currentPhase]}</strong></div>
             <div className="meta-row">
               <span>写作/批改模型</span>
@@ -145,14 +149,16 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                 />
               </div>
             ) : null}
-            <div className="meta-row"><span>Checklist</span><span className={`status ${state.phases.phase4.status}`}>{state.phases.phase4.status}</span></div>
+            <div className="meta-row">
+              <span>Checklist</span>
+              <Badge variant={getStatusVariant(state.phases.phase4.status)}>{state.phases.phase4.status}</Badge>
+            </div>
             <div className="meta-row"><span>状态</span><span>{project.status}</span></div>
-          </div>
+          </Card>
 
           <OutputFileList projectId={project.id} files={outputFiles} />
 
-          <div className="panel">
-            <h2>最近运行</h2>
+          <Card title="最近运行">
             {phaseRuns.slice(0, 5).length === 0 ? (
               <p className="page-subtitle">暂无运行记录。</p>
             ) : (
@@ -160,12 +166,12 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
                 {phaseRuns.slice(0, 5).map((run) => (
                   <div className="meta-row" key={run.id}>
                     <span>{run.phase}</span>
-                    <span className={`status ${run.status}`}>{run.status}</span>
+                    <Badge variant={getStatusVariant(run.status)}>{run.status}</Badge>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </aside>
 
         <section className="grid">
@@ -193,41 +199,39 @@ export default async function ProjectDetailPage({ params, searchParams }: Projec
 
           {canPreviewPhase ? (
             <>
-              <div className="panel">
+              <Card>
                 <div className="phase-row">
                   <h2>输出预览：{phaseLabels[selectedPhase]}</h2>
-                  <a className="button ghost" href={`/projects/${encodeProjectId(project.id)}?phase=${selectedPhase}`}>刷新</a>
+                  <a className="btn btn-ghost" href={`/projects/${encodeProjectId(project.id)}?phase=${selectedPhase}`}>刷新</a>
                 </div>
                 <MarkdownPreview content={output} />
-              </div>
+              </Card>
 
               <ReviewCommentBox projectId={project.id} phase={selectedPhase} disabled={!output} />
             </>
           ) : (
-            <div className="panel">
-              <h2>阶段状态：{phaseLabels[selectedPhase]}</h2>
+            <Card title={`阶段状态：${phaseLabels[selectedPhase]}`}>
               <p className="page-subtitle">该阶段运行成功后自动通过，不展示中间输出。请查看 Phase 1 大纲或 Phase 5 最终文件预览。</p>
-            </div>
+            </Card>
           )}
 
-          <div className="panel">
-            <h2>人工修改记录</h2>
+          <Card title="人工修改记录">
             {reviewComments.length === 0 ? (
               <p className="page-subtitle">暂无修改意见。</p>
             ) : (
               <div className="grid">
                 {reviewComments.slice(0, 6).map((comment) => (
-                  <div className="notice" key={comment.id}>
+                  <div className="feedback-note" key={comment.id}>
                     <strong>{comment.phase}</strong>
-                    <p>{comment.comment}</p>
+                    <p style={{ margin: "4px 0" }}>{comment.comment}</p>
                     <small>{new Date(comment.created_at).toLocaleString()}</small>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </Card>
         </section>
       </section>
-    </main>
+    </PageShell>
   );
 }

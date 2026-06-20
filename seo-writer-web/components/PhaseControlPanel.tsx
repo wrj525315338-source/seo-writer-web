@@ -7,6 +7,9 @@ import { providerLabels, resolveTextModel, textModelOptions } from "@/lib/modelC
 import { PhaseId, ProjectState, Provider } from "@/lib/types";
 import { encodeProjectId } from "@/lib/routeParams";
 import { phaseLabels, phases, requiresManualReview } from "@/lib/validators";
+import Card from "@/components/ui/Card";
+import Badge, { getStatusVariant } from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 
 interface PhaseControlPanelProps {
   projectId: string;
@@ -71,9 +74,8 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
   }
 
   return (
-    <div className="panel">
+    <Card title="Phase 操作区">
       <div className="phase-row">
-        <h2>Phase 操作区</h2>
         <span className="help">流程会自动推进；失败后可重新运行当前阶段</span>
       </div>
       {error ? <div className="error">{error}</div> : null}
@@ -104,9 +106,9 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
                     <strong>{phase.toUpperCase()}</strong> {phaseLabels[phase]}
                   </span>
                 )}
-                <span className={`status ${phaseState.status}`}>
+                <Badge variant={getStatusVariant(isProcessing ? "running" : phaseState.status)}>
                   {isProcessing ? "处理中..." : phaseState.status}
-                </span>
+                </Badge>
               </div>
               {isProcessing && (
                 <div className="notice">
@@ -170,37 +172,37 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
                           </div>
                         </div>
                         <div className="phase-actions">
-                          <button type="button" onClick={() => submit("run", phase)} disabled={isBusy}>
+                          <Button type="button" onClick={() => submit("run", phase)} disabled={isBusy}>
                             <RotateCcw size={15} />
                             重试
-                          </button>
-                          <button
+                          </Button>
+                          <Button
                             type="button"
-                            className="primary"
+                            variant="primary"
                             onClick={() => changeAuditorModelAndRetry(phase)}
                             disabled={isBusy || !auditorModelName}
                           >
                             <Settings size={15} />
                             更换模型
-                          </button>
-                          <button type="button" onClick={() => submit("runPhase4Chunked", phase)} disabled={isBusy}>
+                          </Button>
+                          <Button type="button" onClick={() => submit("runPhase4Chunked", phase)} disabled={isBusy}>
                             <Columns size={15} />
                             分块审查
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     ) : (
-                      <button type="button" onClick={() => submit("run", phase)} disabled={isBusy}>
+                      <Button type="button" onClick={() => submit("run", phase)} disabled={isBusy}>
                         <RotateCcw size={15} />
                         重新运行
-                      </button>
+                      </Button>
                     )
                   ) : null}
                   {showConfirm ? (
-                    <button type="button" className="primary" onClick={() => submit("approve", phase)} disabled={isBusy || isProcessing || !canConfirm}>
+                    <Button type="button" variant="primary" onClick={() => submit("approve", phase)} disabled={isBusy || isProcessing || !canConfirm}>
                       <Check size={15} />
                       {isProcessing ? "处理中..." : busyPhase === phase ? "处理中..." : "确认通过"}
-                    </button>
+                    </Button>
                   ) : null}
                 </div>
               ) : null}
@@ -208,6 +210,6 @@ export default function PhaseControlPanel({ projectId, state, selectedPhase }: P
           );
         })}
       </div>
-    </div>
+    </Card>
   );
 }

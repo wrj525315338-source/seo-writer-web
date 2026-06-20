@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { encodeProjectId } from "@/lib/routeParams";
 import type { ClusterState } from "@/lib/types";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 interface OutlineReviewPanelProps {
   clusterId: string;
@@ -84,7 +86,6 @@ export default function OutlineReviewPanel({
         }
       }
       setComment("");
-      // Refresh to show updated outlines
       window.location.reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
@@ -105,6 +106,7 @@ export default function OutlineReviewPanel({
         {tabs.map((tab) => (
           <button
             key={tab.key}
+            type="button"
             className={`tab ${activeTab === tab.key ? "active" : ""}`}
             onClick={() => setActiveTab(tab.key)}
           >
@@ -113,9 +115,9 @@ export default function OutlineReviewPanel({
         ))}
       </div>
 
-      <div className="content-area">
+      <div>
         {activeTab === "all" && (
-          <div className="all-outlines">
+          <div>
             {outlines.map((outline) => (
               <div key={outline.slug} className="outline-section">
                 <h3>
@@ -126,7 +128,7 @@ export default function OutlineReviewPanel({
                   {outline.content ? (
                     <pre>{outline.content}</pre>
                   ) : (
-                    <p className="empty">大纲尚未生成</p>
+                    <p style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>大纲尚未生成</p>
                   )}
                 </div>
               </div>
@@ -151,7 +153,7 @@ export default function OutlineReviewPanel({
                 {outline.content ? (
                   <pre>{outline.content}</pre>
                 ) : (
-                  <p className="empty">大纲尚未生成</p>
+                  <p style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>大纲尚未生成</p>
                 )}
               </div>
             </div>
@@ -201,88 +203,30 @@ export default function OutlineReviewPanel({
               placeholder="输入修改意见..."
               rows={3}
             />
-            <button
-              className="btn"
+            <Button
               onClick={handleRevise}
               disabled={submitting || !comment.trim() || (commentScope === "article" && !commentArticle)}
             >
               {submitting ? "提交中..." : "提交修改意见"}
-            </button>
+            </Button>
           </div>
 
           {error && <p className="error">{error}</p>}
 
           <div className="approve-section">
-            <button
-              className="btn primary"
+            <Button
+              variant="primary"
               onClick={handleApprove}
               disabled={submitting || outlines.some((o) => !o.content)}
             >
               {submitting ? "审批中..." : "批准全部大纲 →"}
-            </button>
+            </Button>
             {outlines.some((o) => !o.content) && (
               <p className="help">所有文章大纲生成完毕后才能批准。</p>
             )}
           </div>
         </div>
       )}
-
-      <style jsx>{`
-        .outline-review { margin: 1rem 0; }
-        .tabs { display: flex; gap: 0.25rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 1rem; overflow-x: auto; }
-        .tab {
-          padding: 0.5rem 0.75rem;
-          background: none;
-          border: none;
-          border-bottom: 2px solid transparent;
-          cursor: pointer;
-          font-size: 0.85rem;
-          white-space: nowrap;
-        }
-        .tab.active { border-bottom-color: #3b82f6; font-weight: 600; color: #1e40af; }
-        .content-area { margin-bottom: 1.5rem; }
-        .outline-section, .single-outline { margin-bottom: 1.5rem; }
-        .outline-section h3, .single-outline h3 { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.5rem; }
-        .role-badge {
-          font-size: 0.7rem;
-          padding: 0.1rem 0.4rem;
-          background: #dbeafe;
-          border-radius: 3px;
-          font-weight: 600;
-        }
-        .outline-content {
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-          padding: 1rem;
-          max-height: 500px;
-          overflow-y: auto;
-        }
-        .outline-content pre {
-          white-space: pre-wrap;
-          word-wrap: break-word;
-          font-size: 0.85rem;
-          line-height: 1.5;
-          margin: 0;
-          font-family: inherit;
-        }
-        .crosslink-plan pre {
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-          padding: 1rem;
-          white-space: pre-wrap;
-          font-size: 0.85rem;
-        }
-        .empty { color: #9ca3af; font-style: italic; }
-        .review-actions { border-top: 1px solid #e5e7eb; padding-top: 1rem; }
-        .comment-section { margin-bottom: 1rem; }
-        .comment-scope { display: flex; gap: 1rem; align-items: center; margin-bottom: 0.5rem; font-size: 0.85rem; }
-        .comment-scope select { margin-left: 0.5rem; }
-        .comment-section textarea { width: 100%; margin-bottom: 0.5rem; }
-        .approve-section { display: flex; align-items: center; gap: 1rem; }
-        .error { color: #ef4444; }
-      `}</style>
     </div>
   );
 }

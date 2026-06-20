@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 interface CrossLinkApprovalViewProps {
   clusterId: string;
@@ -37,29 +39,20 @@ export default function CrossLinkApprovalView({ clusterId, crossLinkPlan, readOn
   }
 
   return (
-    <div style={{ margin: "1rem 0" }}>
-      <h3>{readOnly ? "互链规划查看" : "互链规划审阅"}</h3>
-      <pre style={{
-        background: "#f9fafb",
-        border: "1px solid #e5e7eb",
-        borderRadius: "6px",
-        padding: "1rem",
-        whiteSpace: "pre-wrap",
-        fontSize: "0.85rem",
-        maxHeight: "600px",
-        overflowY: "auto",
-        marginBottom: "1rem",
-      }}>
+    <Card title={readOnly ? "互链规划查看" : "互链规划审阅"}>
+      <div className="crosslink-content">
         {crossLinkPlan || "互链规划尚未生成"}
-      </pre>
+      </div>
       {!readOnly && (
         <>
-          {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
-          <button className="btn primary" onClick={handleApprove} disabled={approving}>
-            {approving ? "审批中..." : "批准互链规划 →"}
-          </button>
+          {error && <p className="error">{error}</p>}
+          <div style={{ marginTop: 16 }}>
+            <Button variant="primary" onClick={handleApprove} disabled={approving}>
+              {approving ? "审批中..." : "批准互链规划 →"}
+            </Button>
+          </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

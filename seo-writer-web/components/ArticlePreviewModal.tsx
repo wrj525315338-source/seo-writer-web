@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Modal from "./Modal";
+import Button from "@/components/ui/Button";
 
 interface ArticlePreviewModalProps {
   open: boolean;
@@ -31,7 +32,6 @@ export default function ArticlePreviewModal({
 }: ArticlePreviewModalProps) {
   const [activeTab, setActiveTab] = useState<PreviewTab>("outline");
 
-  // Reset tab state when modal opens for a new article
   useEffect(() => {
     if (open) {
       const hasOutline = outlineContent.trim().length > 0;
@@ -42,7 +42,6 @@ export default function ArticlePreviewModal({
   const hasOutline = outlineContent.trim().length > 0;
   const hasFullArticle = fullArticleContent.trim().length > 0;
 
-  // Default to the tab that has content
   const effectiveTab = activeTab === "outline" && !hasOutline && hasFullArticle
     ? "fullArticle"
     : activeTab;
@@ -61,14 +60,13 @@ export default function ArticlePreviewModal({
       footer={
         showReviewLink ? (
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <span style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+            <span className="help">
               需要审核？前往审阅 tab 提交修改意见或批准。
             </span>
             <Link
               href={`/clusters/${clusterId}?view=${reviewTab}`}
-              className="btn primary"
+              className="btn btn-primary"
               onClick={onClose}
-              style={{ textDecoration: "none" }}
             >
               前往审阅 →
             </Link>
@@ -77,44 +75,28 @@ export default function ArticlePreviewModal({
       }
     >
       <div>
-        <div role="tablist" style={{ display: "flex", gap: "0.25rem", marginBottom: "1rem", borderBottom: "1px solid #e5e7eb", paddingBottom: "0.5rem" }}>
+        <div className="tabs" role="tablist">
           <button
+            type="button"
             role="tab"
+            className={`tab${effectiveTab === "outline" ? " active" : ""}`}
             aria-selected={effectiveTab === "outline"}
             aria-controls="panel-outline"
             onClick={() => setActiveTab("outline")}
             disabled={!hasOutline}
-            style={{
-              padding: "0.4rem 0.75rem",
-              background: "none",
-              border: "none",
-              borderBottom: effectiveTab === "outline" ? "2px solid #3b82f6" : "2px solid transparent",
-              cursor: hasOutline ? "pointer" : "default",
-              fontSize: "0.9rem",
-              fontWeight: effectiveTab === "outline" ? 600 : 400,
-              color: !hasOutline ? "#d1d5db" : effectiveTab === "outline" ? "#1e40af" : "#6b7280",
-              opacity: !hasOutline ? 0.5 : 1,
-            }}
+            style={{ opacity: !hasOutline ? 0.5 : 1 }}
           >
             大纲
           </button>
           <button
+            type="button"
             role="tab"
+            className={`tab${effectiveTab === "fullArticle" ? " active" : ""}`}
             aria-selected={effectiveTab === "fullArticle"}
             aria-controls="panel-fullArticle"
             onClick={() => setActiveTab("fullArticle")}
             disabled={!hasFullArticle}
-            style={{
-              padding: "0.4rem 0.75rem",
-              background: "none",
-              border: "none",
-              borderBottom: effectiveTab === "fullArticle" ? "2px solid #3b82f6" : "2px solid transparent",
-              cursor: hasFullArticle ? "pointer" : "default",
-              fontSize: "0.9rem",
-              fontWeight: effectiveTab === "fullArticle" ? 600 : 400,
-              color: !hasFullArticle ? "#d1d5db" : effectiveTab === "fullArticle" ? "#1e40af" : "#6b7280",
-              opacity: !hasFullArticle ? 0.5 : 1,
-            }}
+            style={{ opacity: !hasFullArticle ? 0.5 : 1 }}
           >
             全文
           </button>
@@ -123,17 +105,8 @@ export default function ArticlePreviewModal({
         <div
           id={effectiveTab === "outline" ? "panel-outline" : "panel-fullArticle"}
           role="tabpanel"
-          style={{
-            background: "#f9fafb",
-            border: "1px solid #e5e7eb",
-            borderRadius: "6px",
-            padding: "1rem",
-            maxHeight: "60vh",
-            overflowY: "auto",
-            whiteSpace: "pre-wrap",
-            fontSize: "0.85rem",
-            lineHeight: "1.6",
-          }}
+          className="outline-content"
+          style={{ maxHeight: "60vh" }}
         >
           {isEmpty ? content : "内容尚未生成"}
         </div>

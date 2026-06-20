@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "../styles/components.css";
+import AppHeader from "../components/ui/AppHeader";
 
 export const metadata: Metadata = {
   title: "SEO Article Writer",
@@ -11,20 +13,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="zh-CN">
       <body>
         <div className="app-shell">
-          <header className="topbar">
-            <a className="brand" href="/">
-              <span className="brand-mark">S</span>
-              <span>
-                <strong>SEO Article Writer</strong>
-                <small>Skill 调度工作台</small>
-              </span>
-            </a>
-            <nav>
-              <a href="/projects">项目</a>
-              <a href="/projects/manage">管理</a>
-              <a href="/projects/new">新建</a>
-            </nav>
-          </header>
+          <AppHeader />
           {children}
         </div>
       </body>

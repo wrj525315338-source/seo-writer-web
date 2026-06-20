@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { encodeProjectId } from "@/lib/routeParams";
+import Card from "@/components/ui/Card";
+import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 
 interface ArticleData {
   slug: string;
@@ -51,27 +54,18 @@ export default function ClusterArticleReview({ clusterId, articles, onApprove, a
   }
 
   return (
-    <div style={{ margin: "1rem 0" }}>
-      <h3>{readOnly ? "文章查看（逐篇）" : "文章审阅（逐篇）"}</h3>
-      <p style={{ color: "#6b7280", fontSize: "0.85rem", marginBottom: "1rem" }}>
+    <Card title={readOnly ? "文章查看（逐篇）" : "文章审阅（逐篇）"}>
+      <p className="page-subtitle">
         {readOnly ? "逐篇查看每篇文章内容。" : "逐篇审阅每篇文章，确认后统一批准。"}
       </p>
 
-      <div style={{ display: "flex", gap: "0.25rem", marginBottom: "1rem", overflowX: "auto" }}>
+      <div className="article-review-tabs">
         {articles.map((article, i) => (
           <button
             key={article.slug}
+            type="button"
+            className={`article-review-tab${i === activeIndex ? " active" : ""}`}
             onClick={() => setActiveIndex(i)}
-            style={{
-              padding: "0.4rem 0.75rem",
-              background: i === activeIndex ? "#eff6ff" : "#f9fafb",
-              border: i === activeIndex ? "1px solid #3b82f6" : "1px solid #e5e7eb",
-              borderRadius: "4px",
-              cursor: "pointer",
-              fontSize: "0.8rem",
-              whiteSpace: "nowrap",
-              fontWeight: i === activeIndex ? 600 : 400,
-            }}
           >
             {article.role}: {article.slug}
           </button>
@@ -80,27 +74,14 @@ export default function ClusterArticleReview({ clusterId, articles, onApprove, a
 
       {activeArticle && (
         <div>
-          <h4>
-            <span style={{ fontSize: "0.7rem", padding: "0.1rem 0.4rem", background: "#dbeafe", borderRadius: "3px", fontWeight: 600, marginRight: "0.5rem" }}>
-              {activeArticle.role}
-            </span>
+          <h4 style={{ display: "flex", alignItems: "center", gap: 8, margin: "0 0 8px" }}>
+            <Badge variant="info">{activeArticle.role}</Badge>
             {activeArticle.slug}
           </h4>
-          <div style={{
-            background: "#f9fafb",
-            border: "1px solid #e5e7eb",
-            borderRadius: "6px",
-            padding: "1rem",
-            maxHeight: "600px",
-            overflowY: "auto",
-            marginBottom: "1rem",
-            whiteSpace: "pre-wrap",
-            fontSize: "0.85rem",
-            lineHeight: "1.6",
-          }}>
+          <div className="outline-content" style={{ maxHeight: 600, marginBottom: 16 }}>
             {activeArticle.content || "文章尚未生成"}
           </div>
-          <p style={{ fontSize: "0.8rem", color: "#6b7280" }}>
+          <p className="help">
             <a href={`/projects/${encodeProjectId(activeArticle.projectId)}`} target="_blank" rel="noopener noreferrer">
               在单独项目页面中查看完整详情 →
             </a>
@@ -110,18 +91,18 @@ export default function ClusterArticleReview({ clusterId, articles, onApprove, a
 
       {!readOnly && (
         <>
-          {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
+          {error && <p className="error">{error}</p>}
 
-          <div style={{ display: "flex", gap: "0.75rem", marginTop: "1rem", borderTop: "1px solid #e5e7eb", paddingTop: "1rem" }}>
-            <button className="btn primary" onClick={handleApproveAll} disabled={approving || articles.some((a) => !a.content)}>
+          <div className="review-actions" style={{ borderTop: "1px solid var(--color-border-soft)", paddingTop: 16, marginTop: 16 }}>
+            <Button variant="primary" onClick={handleApproveAll} disabled={approving || articles.some((a) => !a.content)}>
               {approving ? "审批中..." : "批准全部文章 →"}
-            </button>
+            </Button>
             {articles.some((a) => !a.content) && (
-              <p className="help" style={{ alignSelf: "center" }}>所有文章生成完毕后才能批准。</p>
+              <p className="help">所有文章生成完毕后才能批准。</p>
             )}
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

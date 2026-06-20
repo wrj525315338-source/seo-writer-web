@@ -5,6 +5,9 @@ import { getCluster, listClusterArticles } from "@/lib/db";
 import { readClusterState } from "@/lib/clusterState";
 import { getClusterProgress } from "@/lib/clusterRunner";
 import { readOutputForPhase, getClusterDir } from "@/lib/fileStorage";
+import PageShell from "@/components/ui/PageShell";
+import PageTitle from "@/components/ui/PageTitle";
+import Tabs from "@/components/ui/Tabs";
 import ClusterDashboard from "@/components/ClusterDashboard";
 import OutlineReviewPanel from "@/components/OutlineReviewPanel";
 import CrossLinkApprovalView from "@/components/CrossLinkApprovalView";
@@ -33,14 +36,12 @@ export default async function ClusterDetailPage({
   const currentPhase = state.currentPhase;
   const currentPhaseState = state.phases[currentPhase];
 
-  // Determine which views are in active review (waiting_review)
   const isOutlineReview = currentPhase === "cluster_phase1" && currentPhaseState?.status === "waiting_review";
   const isCrossLinkReview = currentPhase === "cluster_phase1b" && currentPhaseState?.status === "waiting_review";
   const isChecklistReview = currentPhase === "cluster_phase4" && currentPhaseState?.status === "waiting_review";
   const isArticleReview = currentPhase === "cluster_phase5" && currentPhaseState?.status === "waiting_review";
   const isBatchReview = currentPhase === "cluster_batch_confirm" && currentPhaseState?.status === "waiting_review";
 
-  // Default view based on current phase
   const defaultView = isOutlineReview ? "outlines"
     : isCrossLinkReview ? "crosslink"
     : isChecklistReview ? "checklist"
@@ -48,7 +49,6 @@ export default async function ClusterDetailPage({
     : isBatchReview ? "batch"
     : "dashboard";
 
-  // Read data for each view
   const outlines = articles.map((article) => {
     let content = "";
     try { content = readOutputForPhase(article.project_id, "phase1"); } catch { /* */ }
@@ -79,52 +79,43 @@ export default async function ClusterDetailPage({
     if (fs.existsSync(reviewPath)) batchReview = fs.readFileSync(reviewPath, "utf-8");
   } catch { /* */ }
 
-  // Content existence checks (for showing tabs even when not in review)
   const hasOutlines = outlines.some(o => o.content.trim().length > 0);
   const hasCrossLink = crossLinkPlan.trim().length > 0;
   const hasChecklist = checklistReports.some(c => c.content.trim().length > 0);
   const hasArticles = fullArticles.some(a => a.content.trim().length > 0);
   const hasBatchReview = batchReview.trim().length > 0;
 
-  // Validate view parameter
   const validViews = ["dashboard", "outlines", "crosslink", "checklist", "articles", "batch"];
   const viewMode = view && validViews.includes(view) ? view : defaultView;
 
-  return (
-    <main className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">集群项目：{state.clusterName}</h1>
-          <p className="page-subtitle">
-            {articles.length} 篇文章 · {state.crossLinkRules.length} 条互链规则
-          </p>
-        </div>
-      </div>
+  const tabs = [
+    { key: "dashboard", label: "Dashboard" },
+    (isOutlineReview || hasOutlines) ? { key: "outlines", label: isOutlineReview ? "大纲审阅" : "大纲查看" } : null,
+    (isCrossLinkReview || hasCrossLink) ? { key: "crosslink", label: isCrossLinkReview ? "互链审阅" : "互链查看" } : null,
+    (isChecklistReview || hasChecklist) ? { key: "checklist", label: isChecklistReview ? "Checklist 审阅" : "Checklist 查看" } : null,
+    (isArticleReview || hasArticles) ? { key: "articles", label: isArticleReview ? "文章审阅" : "文章查看" } : null,
+    (isBatchReview || hasBatchReview) ? { key: "batch", label: isBatchReview ? "批量确认" : "批量查看" } : null,
+  ].filter((tab): tab is { key: string; label: string } => tab !== null);
 
-      <nav style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem", borderBottom: "1px solid #e5e7eb", paddingBottom: "0.5rem", flexWrap: "wrap" }}>
-        {([
-          { key: "dashboard", label: "Dashboard" },
-          (isOutlineReview || hasOutlines) ? { key: "outlines", label: isOutlineReview ? "大纲审阅" : "大纲查看" } : null,
-          (isCrossLinkReview || hasCrossLink) ? { key: "crosslink", label: isCrossLinkReview ? "互链审阅" : "互链查看" } : null,
-          (isChecklistReview || hasChecklist) ? { key: "checklist", label: isChecklistReview ? "Checklist 审阅" : "Checklist 查看" } : null,
-          (isArticleReview || hasArticles) ? { key: "articles", label: isArticleReview ? "文章审阅" : "文章查看" } : null,
-          (isBatchReview || hasBatchReview) ? { key: "batch", label: isBatchReview ? "批量确认" : "批量查看" } : null,
-        ].filter((tab): tab is { key: string; label: string } => tab !== null).map((tab) => (
-          <a
-            key={tab.key}
-            href={`/clusters/${clusterId}?view=${tab.key}`}
-            style={{
-              padding: "0.4rem 0.75rem",
-              textDecoration: "none",
-              color: viewMode === tab.key ? "#1e40af" : "#6b7280",
-              borderBottom: viewMode === tab.key ? "2px solid #3b82f6" : "2px solid transparent",
-              fontSize: "0.9rem",
-              fontWeight: viewMode === tab.key ? 600 : 400,
-            }}
-          >
-            {tab.label}
-          </a>
-        )))}
+  return (
+    <PageShell>
+      <PageTitle
+        title={`集群项目：${state.clusterName}`}
+        subtitle={`${articles.length} 篇文章 · ${state.crossLinkRules.length} 条互链规则`}
+      />
+
+      <nav style={{ marginBottom: "1.5rem" }}>
+        <div className="tabs">
+          {tabs.map((tab) => (
+            <a
+              key={tab.key}
+              href={`/clusters/${clusterId}?view=${tab.key}`}
+              className={`tab${viewMode === tab.key ? " active" : ""}`}
+            >
+              {tab.label}
+            </a>
+          ))}
+        </div>
       </nav>
 
       {viewMode === "dashboard" && (
@@ -179,6 +170,6 @@ export default async function ClusterDetailPage({
           readOnly={!isBatchReview}
         />
       )}
-    </main>
+    </PageShell>
   );
 }

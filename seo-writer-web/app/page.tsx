@@ -2,6 +2,9 @@ import { ListChecks, Plus, Settings } from "lucide-react";
 import { listProjects } from "@/lib/db";
 import { encodeProjectId } from "@/lib/routeParams";
 import { phaseLabels } from "@/lib/validators";
+import PageShell from "@/components/ui/PageShell";
+import PageTitle from "@/components/ui/PageTitle";
+import Badge, { getStatusVariant } from "@/components/ui/Badge";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -10,27 +13,27 @@ export default function DashboardPage() {
   const projects = listProjects();
 
   return (
-    <main className="page">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">文章项目</h1>
-          <p className="page-subtitle">按阶段调度 SEO Article Writer Skill，保留人工审查和输出文件。</p>
-        </div>
-        <div className="header-actions">
-          <a className="button ghost" href="/projects/manage">
-            <ListChecks size={16} />
-            管理
-          </a>
-          <a className="button ghost" href="/clusters/new">
-            <Plus size={16} />
-            新建集群项目
-          </a>
-          <a className="button primary" href="/projects/new">
-            <Plus size={16} />
-            新建文章项目
-          </a>
-        </div>
-      </div>
+    <PageShell>
+      <PageTitle
+        title="文章项目"
+        subtitle="按阶段调度 SEO Article Writer Skill，保留人工审查和输出文件。"
+        actions={
+          <>
+            <a className="btn btn-ghost" href="/projects/manage">
+              <ListChecks size={16} />
+              管理
+            </a>
+            <a className="btn btn-ghost" href="/clusters/new">
+              <Plus size={16} />
+              新建集群项目
+            </a>
+            <a className="btn btn-primary" href="/projects/new">
+              <Plus size={16} />
+              新建文章项目
+            </a>
+          </>
+        }
+      />
 
       {projects.length === 0 ? (
         <div className="empty">
@@ -43,9 +46,9 @@ export default function DashboardPage() {
             <a className="project-card" href={`/projects/${encodeProjectId(project.id)}`} key={project.id}>
               <div className="phase-row">
                 <h2>{project.name}</h2>
-                <span className={`status ${project.status === "completed" ? "approved" : "waiting_review"}`}>
+                <Badge variant={getStatusVariant(project.status === "completed" ? "approved" : "waiting_review")}>
                   {project.status}
-                </span>
+                </Badge>
               </div>
               <p className="page-subtitle">{project.article_title || project.topic}</p>
               <div className="meta-row">
@@ -72,6 +75,6 @@ export default function DashboardPage() {
           ))}
         </section>
       )}
-    </main>
+    </PageShell>
   );
 }

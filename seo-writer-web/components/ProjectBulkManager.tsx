@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckSquare, Square, Trash2 } from "lucide-react";
+import Card from "@/components/ui/Card";
+import Badge, { getStatusVariant } from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 import type { Project } from "@/lib/types";
 import { phaseLabels } from "@/lib/validators";
 
@@ -71,17 +74,19 @@ export default function ProjectBulkManager({ projects }: ProjectBulkManagerProps
 
   return (
     <div className="grid">
-      <div className="panel manage-toolbar">
-        <button type="button" onClick={toggleAll} disabled={projects.length === 0 || isDeleting}>
-          {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
-          {allSelected ? "取消全选" : "全选"}
-        </button>
-        <span className="page-subtitle">已选择 {selectedIds.size} / {projects.length} 个项目</span>
-        <button className="danger" type="button" onClick={deleteSelected} disabled={selectedIds.size === 0 || isDeleting}>
-          <Trash2 size={16} />
-          {isDeleting ? "删除中..." : "删除所选"}
-        </button>
-      </div>
+      <Card>
+        <div className="manage-toolbar">
+          <Button type="button" onClick={toggleAll} disabled={projects.length === 0 || isDeleting}>
+            {allSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+            {allSelected ? "取消全选" : "全选"}
+          </Button>
+          <span className="page-subtitle">已选择 {selectedIds.size} / {projects.length} 个项目</span>
+          <Button variant="danger" type="button" onClick={deleteSelected} disabled={selectedIds.size === 0 || isDeleting}>
+            <Trash2 size={16} />
+            {isDeleting ? "删除中..." : "删除所选"}
+          </Button>
+        </div>
+      </Card>
 
       {error ? <div className="error">{error}</div> : null}
 
@@ -102,9 +107,9 @@ export default function ProjectBulkManager({ projects }: ProjectBulkManagerProps
                 <span className="manage-card-body">
                   <span className="phase-row">
                     <strong>{project.name}</strong>
-                    <span className={`status ${project.status === "completed" ? "approved" : "waiting_review"}`}>
+                    <Badge variant={getStatusVariant(project.status === "completed" ? "approved" : "waiting_review")}>
                       {project.status}
-                    </span>
+                    </Badge>
                   </span>
                   <span className="page-subtitle">{project.article_title || project.topic}</span>
                   <span className="meta-row">

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { encodeProjectId } from "@/lib/routeParams";
 import { isTextProvider, providerLabels, textModelOptions, getDefaultBaseUrl } from "@/lib/modelCatalog";
 import type { Provider } from "@/lib/types";
+import Button from "@/components/ui/Button";
 
 interface AuditorModelEditorProps {
   projectId: string;
@@ -34,12 +35,10 @@ export default function AuditorModelEditor({
   function handleProviderChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newProvider = e.target.value as Provider;
     setProvider(newProvider);
-    // Reset model to first option for new provider
     const models = textModelOptions[newProvider];
     if (models && models.length > 0) {
       setModelName(models[0].value);
     }
-    // Update baseUrl to default for new provider
     setBaseUrl(getDefaultBaseUrl(newProvider));
   }
 
@@ -82,9 +81,9 @@ export default function AuditorModelEditor({
 
   if (!editing) {
     return (
-      <button type="button" className="btn-sm" onClick={() => setEditing(true)}>
+      <Button size="sm" type="button" onClick={() => setEditing(true)}>
         更换审查模型
-      </button>
+      </Button>
     );
   }
 
@@ -116,60 +115,15 @@ export default function AuditorModelEditor({
           <input type="number" step="0.1" min="0" max="2" value={temperature} onChange={(e) => setTemperature(e.target.value)} />
         </div>
       </div>
-      {error && <p className="error" style={{ marginTop: "0.5rem" }}>{error}</p>}
-      <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-        <button type="button" className="btn-sm primary" onClick={handleSave} disabled={saving}>
+      {error && <p className="error">{error}</p>}
+      <div className="editor-actions">
+        <Button size="sm" variant="primary" type="button" onClick={handleSave} disabled={saving}>
           {saving ? "保存中..." : "保存"}
-        </button>
-        <button type="button" className="btn-sm ghost" onClick={handleCancel}>
+        </Button>
+        <Button size="sm" variant="ghost" type="button" onClick={handleCancel}>
           取消
-        </button>
+        </Button>
       </div>
-
-      <style jsx>{`
-        .auditor-editor {
-          margin-top: 0.5rem;
-          padding: 0.75rem;
-          background: #f9fafb;
-          border: 1px solid #e5e7eb;
-          border-radius: 6px;
-        }
-        .form-grid.compact {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 0.5rem;
-        }
-        .field label {
-          display: block;
-          font-size: 0.75rem;
-          font-weight: 600;
-          margin-bottom: 0.2rem;
-          color: #6b7280;
-        }
-        .field select, .field input {
-          width: 100%;
-          padding: 0.3rem 0.5rem;
-          border: 1px solid #d1d5db;
-          border-radius: 4px;
-          font-size: 0.85rem;
-        }
-        .btn-sm {
-          padding: 0.25rem 0.6rem;
-          font-size: 0.8rem;
-          border: 1px solid #d1d5db;
-          border-radius: 4px;
-          background: white;
-          cursor: pointer;
-          color: #374151;
-        }
-        .btn-sm:hover { background: #f9fafb; }
-        .btn-sm.primary { background: #2563eb; color: white; border-color: #2563eb; }
-        .btn-sm.primary:hover { background: #1d4ed8; }
-        .btn-sm.primary:disabled { opacity: 0.6; cursor: not-allowed; }
-        .btn-sm.ghost { border: none; color: #6b7280; }
-        .btn-sm.ghost:hover { color: #1f2937; }
-        .error { color: #ef4444; font-size: 0.8rem; }
-      `}</style>
     </div>
   );
 }

@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
 
 interface BatchReviewViewProps {
   clusterId: string;
@@ -39,34 +41,21 @@ export default function BatchReviewView({ clusterId, batchReview, onApprove, rea
   }
 
   return (
-    <div style={{ margin: "1rem 0" }}>
-      <h3>{readOnly ? "批量查看" : "批量确认"}</h3>
-      <div style={{
-        background: "#f9fafb",
-        border: "1px solid #e5e7eb",
-        borderRadius: "6px",
-        padding: "1rem",
-        maxHeight: "600px",
-        overflowY: "auto",
-        marginBottom: "1rem",
-        whiteSpace: "pre-wrap",
-        fontSize: "0.85rem",
-        lineHeight: "1.6",
-      }}>
+    <Card title={readOnly ? "批量查看" : "批量确认"}>
+      <div className="batch-review-content">
         {batchReview || "批量审查报告尚未生成。请先运行批量确认阶段。"}
       </div>
 
       {!readOnly && (
         <>
-          {error && <p style={{ color: "#ef4444", marginBottom: "0.5rem" }}>{error}</p>}
-
-          <div style={{ display: "flex", gap: "0.75rem" }}>
-            <button className="btn primary" onClick={handleApprove} disabled={approving || !batchReview}>
+          {error && <p className="error">{error}</p>}
+          <div style={{ marginTop: 16 }}>
+            <Button variant="primary" onClick={handleApprove} disabled={approving || !batchReview}>
               {approving ? "审批中..." : "确认集群完成 →"}
-            </button>
+            </Button>
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

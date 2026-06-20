@@ -1,0 +1,86 @@
+/* ============================================
+   Design Tokens — Editorial Writing Workbench
+   ============================================ */
+
+:root {
+  /* ── Page Background ── */
+  --color-bg-page: #F7F3EA;
+  --color-bg-page-soft: #FAF7F0;
+
+  /* ── Surface ── */
+  --color-surface: #FFFDF7;
+  --color-surface-muted: #F3EEE3;
+
+  /* ── Text ── */
+  --color-text-primary: #20231F;
+  --color-text-secondary: #5F6861;
+  --color-text-muted: #8A918A;
+
+  /* ── Brand (deep green) ── */
+  --color-brand: #0F6B5A;
+  --color-brand-dark: #0A4F44;
+  --color-brand-soft: #E4F1EA;
+
+  /* ── Borders ── */
+  --color-border: #E2D9CB;
+  --color-border-soft: #EEE6DA;
+
+  /* ── Status: Success ── */
+  --color-success-bg: #E2F4EA;
+  --color-success-text: #177245;
+
+  /* ── Status: Warning ── */
+  --color-warning-bg: #FFF2CC;
+  --color-warning-text: #8A5A00;
+
+  /* ── Status: Danger ── */
+  --color-danger-bg: #F8DADA;
+  --color-danger-text: #A64040;
+
+  /* ── Status: Info / Running ── */
+  --color-info-bg: #E0F0F8;
+  --color-info-text: #1A5F7A;
+
+  /* ── Status: Neutral / Not Started ── */
+  --color-neutral-bg: #ECEAE4;
+  --color-neutral-text: #6B6B60;
+
+  /* ── Shadows ── */
+  --shadow-card: 0 12px 32px rgba(34, 31, 25, 0.06);
+  --shadow-card-soft: 0 6px 18px rgba(34, 31, 25, 0.04);
+  --shadow-dropdown: 0 8px 24px rgba(34, 31, 25, 0.12);
+
+  /* ── Typography ── */
+  --font-display: Georgia, "Noto Serif SC", "Songti SC", "STSong", serif;
+  --font-ui: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /* ── Spacing ── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+  --space-4xl: 64px;
+
+  /* ── Border Radius ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-pill: 999px;
+
+  /* ── Layout ── */
+  --max-width: 1440px;
+  --content-width: 1280px;
+  --header-height: 64px;
+  --sidebar-width: 360px;
+
+  /* ── Transitions ── */
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+
+  color-scheme: light;
+}

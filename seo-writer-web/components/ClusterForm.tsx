@@ -3,6 +3,12 @@
 import { FormEvent, useRef, useState } from "react";
 import ModelConfigForm from "@/components/ModelConfigForm";
 import FileUpload from "@/components/FileUpload";
+import Card from "@/components/ui/Card";
+import Button from "@/components/ui/Button";
+import DataTable from "@/components/ui/DataTable";
+import WarningCard from "@/components/ui/WarningCard";
+import FormSection from "@/components/ui/FormSection";
+import FormField from "@/components/ui/FormField";
 import type { ParsedCluster } from "@/lib/types";
 
 type Step = "upload" | "preview" | "creating";
@@ -46,6 +52,23 @@ function extractModelConfig(form: HTMLFormElement): ModelConfig {
   };
 }
 
+const articleColumns = [
+  { key: "index", header: "#", width: "48px" },
+  { key: "role", header: "角色" },
+  { key: "title", header: "标题" },
+  { key: "primaryKeyword", header: "主关键词" },
+  { key: "articleType", header: "类型" },
+  { key: "wordCount", header: "字数" },
+];
+
+const crossLinkColumns = [
+  { key: "sourceSlug", header: "来源" },
+  { key: "targetSlug", header: "目标" },
+  { key: "anchorText", header: "锚文本" },
+  { key: "placementHint", header: "位置" },
+  { key: "direction", header: "方向" },
+];
+
 export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
   const [step, setStep] = useState<Step>("upload");
   const [parsed, setParsed] = useState<ParsedCluster | null>(null);
@@ -71,7 +94,6 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
       return;
     }
 
-    // Read file content for later use (only for text formats)
     const ext = briefFile.name.split(".").pop()?.toLowerCase() || "";
     const isBinary = ["docx", "doc", "xlsx", "xlsm"].includes(ext);
     if (!isBinary) {
@@ -80,8 +102,6 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
     }
     setOriginalFileName(briefFile.name);
 
-    // Save model config before the form gets unmounted
-    // Use formRef.current instead of e.currentTarget (which may be stale after await)
     if (formRef.current) {
       setModelConfig(extractModelConfig(formRef.current));
     }
@@ -100,7 +120,6 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
       }
 
       setParsed(data.parsed);
-      // Use server-extracted brief content (handles binary formats correctly)
       if (data.briefContent) {
         setBriefContent(data.briefContent);
       }
@@ -147,7 +166,6 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
         return;
       }
 
-      // Redirect to cluster detail page
       window.location.href = `/clusters/${data.clusterId}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
@@ -156,17 +174,33 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
     }
   }
 
+  const articleData = parsed
+    ? parsed.articles.map((article, i) => ({
+        index: String(i + 1),
+        role: article.role,
+        title: article.title,
+        primaryKeyword: article.primaryKeyword,
+        articleType: article.articleType,
+        wordCount: `${article.targetWordCount.min}-${article.targetWordCount.max}`,
+      }))
+    : [];
+
+  const crossLinkData = parsed
+    ? parsed.crossLinkRules.map((rule) => ({
+        ...rule,
+        direction: rule.direction === "bidirectional" ? "双向" : "单向",
+      }))
+    : [];
+
   return (
     <div>
       {step === "upload" && (
         <form ref={formRef} onSubmit={handleParse}>
-          <div className="form-section">
-            <h2>集群 Brief</h2>
-            <p className="help">
-              上传包含多篇文章规划的 brief 文件（.md / .xlsx / .docx / .txt）。系统会自动解析出文章列表、关键词和互链规则。
-            </p>
-            <div className="field">
-              <label htmlFor="briefFile">Brief 文件</label>
+          <FormSection
+            title="集群 Brief"
+            description="上传包含多篇文章规划的 brief 文件（.md / .xlsx / .docx / .txt）。系统会自动解析出文章列表、关键词和互链规则。"
+          >
+            <FormField label="Brief 文件" htmlFor="briefFile" full>
               <input
                 id="briefFile"
                 name="briefFile"
@@ -174,11 +208,10 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
                 accept=".md,.markdown,.xlsx,.xlsm,.docx,.doc,.txt"
                 required
               />
-            </div>
-          </div>
+            </FormField>
+          </FormSection>
 
-          <div className="form-section">
-            <h2>长期参考文件（可复用已有）</h2>
+          <FormSection title="长期参考文件（可复用已有）">
             <FileUpload
               name="writingGuidelineFile"
               label="写作规范"
@@ -195,29 +228,27 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
               currentFiles={sharedFiles.hasExampleArticles ? sharedFiles.exampleArticleFiles : undefined}
               help={sharedFiles.hasExampleArticles ? "上传新文件将替换当前示例。" : "可先上传一次，后续自动复用。"}
             />
-          </div>
+          </FormSection>
 
           <ModelConfigForm />
 
           {error && <p className="error">{error}</p>}
 
           <div className="form-actions">
-            <button type="submit" className="btn primary" disabled={loading}>
+            <Button variant="primary" type="submit" disabled={loading}>
               {loading ? "解析中..." : "解析 Brief →"}
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
       {step === "preview" && parsed && (
         <div>
-          <div className="form-section">
-            <h2>Brief 解析结果 — 请确认</h2>
+          <Card title="Brief 解析结果 — 请确认">
             <p className="help">来源文件：{originalFileName}</p>
-          </div>
+          </Card>
 
-          <div className="form-section">
-            <h3>集群信息</h3>
+          <Card title="集群信息">
             <table>
               <tbody>
                 <tr><td><strong>集群名称</strong></td><td>{parsed.clusterName}</td></tr>
@@ -225,124 +256,73 @@ export default function ClusterForm({ sharedFiles }: ClusterFormProps) {
                 <tr><td><strong>语言</strong></td><td>{parsed.language}</td></tr>
               </tbody>
             </table>
-          </div>
+          </Card>
 
-          <div className="form-section">
-            <h3>识别到 {parsed.articles.length} 篇文章</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>角色</th>
-                  <th>标题</th>
-                  <th>主关键词</th>
-                  <th>类型</th>
-                  <th>字数</th>
-                </tr>
-              </thead>
-              <tbody>
-                {parsed.articles.map((article, i) => (
-                  <tr key={article.slug}>
-                    <td>{i + 1}</td>
-                    <td>{article.role}</td>
-                    <td>{article.title}</td>
-                    <td>{article.primaryKeyword}</td>
-                    <td>{article.articleType}</td>
-                    <td>{article.targetWordCount.min}-{article.targetWordCount.max}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Card title={`识别到 ${parsed.articles.length} 篇文章`}>
+            <DataTable columns={articleColumns} data={articleData} />
+          </Card>
 
-          <div className="form-section">
-            <h3>识别到 {parsed.crossLinkRules.length} 条互链规则</h3>
-            <table>
-              <thead>
-                <tr>
-                  <th>来源</th>
-                  <th>目标</th>
-                  <th>锚文本</th>
-                  <th>位置</th>
-                  <th>方向</th>
-                </tr>
-              </thead>
-              <tbody>
-                {parsed.crossLinkRules.map((rule, i) => (
-                  <tr key={i}>
-                    <td>{rule.sourceSlug}</td>
-                    <td>{rule.targetSlug}</td>
-                    <td>{rule.anchorText}</td>
-                    <td>{rule.placementHint}</td>
-                    <td>{rule.direction === "bidirectional" ? "双向" : "单向"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Card title={`识别到 ${parsed.crossLinkRules.length} 条互链规则`}>
+            <DataTable columns={crossLinkColumns} data={crossLinkData} />
+          </Card>
 
           {parsed.specialRequirements.bannedCompetitors.length > 0 && (
-            <div className="form-section">
-              <h3>竞品禁令</h3>
+            <Card title="竞品禁令">
               <ul>
                 {parsed.specialRequirements.bannedCompetitors.map((c) => (
                   <li key={c}>{c}</li>
                 ))}
               </ul>
-            </div>
+            </Card>
           )}
 
           {parsed.specialRequirements.collisionWarnings.length > 0 && (
-            <div className="form-section">
-              <h3>已上线文章冲突警告</h3>
-              <ul>
+            <WarningCard title="已上线文章冲突警告">
+              <ul style={{ margin: 0, paddingLeft: 18 }}>
                 {parsed.specialRequirements.collisionWarnings.map((w, i) => (
                   <li key={i}>{w}</li>
                 ))}
               </ul>
-            </div>
+            </WarningCard>
           )}
 
           {parsed.specialRequirements.brandData.length > 0 && (
-            <div className="form-section">
-              <h3>品牌数据</h3>
+            <Card title="品牌数据">
               <ul>
                 {parsed.specialRequirements.brandData.map((d) => (
                   <li key={d}>{d}</li>
                 ))}
               </ul>
-            </div>
+            </Card>
           )}
 
           {parsed.specialRequirements.requiredModules.length > 0 && (
-            <div className="form-section">
-              <h3>必须描述的功能模块</h3>
+            <Card title="必须描述的功能模块">
               <ul>
                 {parsed.specialRequirements.requiredModules.map((m) => (
                   <li key={m}>{m}</li>
                 ))}
               </ul>
-            </div>
+            </Card>
           )}
 
           {error && <p className="error">{error}</p>}
 
           <div className="form-actions">
-            <button type="button" className="btn" onClick={() => { setStep("upload"); setParsed(null); }}>
+            <Button type="button" onClick={() => { setStep("upload"); setParsed(null); }}>
               ← 返回修改
-            </button>
-            <button type="button" className="btn primary" onClick={handleCreate} disabled={loading}>
+            </Button>
+            <Button variant="primary" type="button" onClick={handleCreate} disabled={loading}>
               确认创建集群项目 →
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {step === "creating" && (
-        <div className="form-section">
-          <h2>正在创建集群项目...</h2>
+        <Card title="正在创建集群项目...">
           <p>正在为 {parsed?.articles.length} 篇文章创建项目和目录结构，请稍候。</p>
-        </div>
+        </Card>
       )}
     </div>
   );
